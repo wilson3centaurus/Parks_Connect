@@ -1,0 +1,81 @@
+<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>Operational charts</h2>
+      <p>Live visual overview for wildlife activity, alerts, visitors, and infrastructure across the platform.</p>
+    </div>
+  </div>
+  <div class="chart-grid">
+    <article class="card chart-card">
+      <div class="section-header"><div><h2>Wildlife sightings by species</h2><p>Top species activity across all parks.</p></div></div>
+      <canvas id="wildlifeBySpeciesChart"></canvas>
+    </article>
+    <article class="card chart-card">
+      <div class="section-header"><div><h2>Alerts by type and severity</h2><p>Operational alert load and severity mix.</p></div></div>
+      <canvas id="alertsByTypeChart"></canvas>
+    </article>
+    <article class="card chart-card">
+      <div class="section-header"><div><h2>Visitor trends per park</h2><p>Recent traffic pattern and park utilization.</p></div></div>
+      <canvas id="visitorTrendsChart"></canvas>
+    </article>
+    <article class="card chart-card">
+      <div class="section-header"><div><h2>Infrastructure status breakdown</h2><p>Current state of reported park assets.</p></div></div>
+      <canvas id="infrastructureStatusChart"></canvas>
+    </article>
+  </div>
+</section>
+
+<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>Quick links</h2>
+      <p>Fast access to every operational module.</p>
+    </div>
+  </div>
+  <div class="link-grid">
+    <% quickLinks.forEach((link) => { %>
+      <a class="link-card" href="<%= link.href %>"><%= link.label %></a>
+    <% }) %>
+  </div>
+</section>
+
+<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>Recent activity log</h2>
+      <p>Latest 10 actions across the platform. Users: <strong><%= totalUsers %></strong> · Parks: <strong><%= totalParks %></strong> · Active alerts: <strong><%= activeAlerts %></strong></p>
+    </div>
+    <a href="/admin/logs" class="btn btn-secondary">View all logs</a>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Module</th>
+          <th>Description</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (recentActivity.length) { %>
+          <% recentActivity.forEach((log) => { %>
+            <tr>
+              <td><%= formatDate(log.created_at) %></td>
+              <td><%= log.user_name %></td>
+              <td><span class="badge neutral"><%= log.action %></span></td>
+              <td><%= log.module %></td>
+              <td><%= log.description %></td>
+              <td><%= log.ip_address || 'system' %></td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr><td colspan="6" class="empty-state">No activity logged yet.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -1,0 +1,101 @@
+﻿<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>User filters</h2>
+      <p>Search, page, and narrow user results.</p>
+    </div>
+  </div>
+  <form method="GET" action="/admin/users" class="form-grid four-col compact">
+    <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Search name, email, phone">
+    <select name="role">
+      <option value="">All roles</option>
+      <% ['admin', 'ranger', 'tourism_officer', 'analyst', 'public'].forEach((role) => { %>
+        <option value="<%= role %>" <%= filters.role === role ? 'selected' : '' %>><%= role %></option>
+      <% }) %>
+    </select>
+    <select name="status">
+      <option value="">All status</option>
+      <option value="active" <%= filters.status === 'active' ? 'selected' : '' %>>Active</option>
+      <option value="inactive" <%= filters.status === 'inactive' ? 'selected' : '' %>>Inactive</option>
+    </select>
+    <select name="limit">
+      <% [10, 25, 50].forEach((item) => { %>
+        <option value="<%= item %>" <%= pagination.limit === item ? 'selected' : '' %>><%= item %> per page</option>
+      <% }) %>
+    </select>
+    <button type="submit" class="btn btn-primary">Apply</button>
+  </form>
+</section>
+
+<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>User management</h2>
+      <p>Change roles, toggle access, and assign parks.</p>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Assigned Parks</th>
+          <th>Change Role</th>
+          <th>Assign Park</th>
+          <th>Toggle</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (users.length) { %>
+          <% users.forEach((account) => { %>
+            <tr>
+              <td>
+                <strong><%= account.first_name %> <%= account.surname %></strong>
+                <div class="muted-copy"><%= account.email %></div>
+              </td>
+              <td><span class="badge neutral"><%= account.role %></span></td>
+              <td><span class="badge <%= account.is_active ? 'success' : 'error' %>"><%= account.is_active ? 'active' : 'inactive' %></span></td>
+              <td><%= account.assigned_parks || '—' %></td>
+              <td>
+                <form method="POST" action="/admin/users/<%= account.id %>/role" class="inline-form">
+                  <select name="role">
+                    <% ['admin', 'ranger', 'tourism_officer', 'analyst', 'public'].forEach((role) => { %>
+                      <option value="<%= role %>" <%= account.role === role ? 'selected' : '' %>><%= role %></option>
+                    <% }) %>
+                  </select>
+                  <button type="submit" class="btn btn-secondary">Save</button>
+                </form>
+              </td>
+              <td>
+                <form method="POST" action="/admin/users/<%= account.id %>/assign-park" class="inline-form">
+                  <select name="parkId">
+                    <option value="">Choose park</option>
+                    <% parks.forEach((park) => { %>
+                      <option value="<%= park.id %>"><%= park.name %></option>
+                    <% }) %>
+                  </select>
+                  <button type="submit" class="btn btn-secondary">Assign</button>
+                </form>
+              </td>
+              <td>
+                <form method="POST" action="/admin/users/<%= account.id %>/toggle">
+                  <button type="submit" class="btn <%= account.is_active ? 'btn-danger' : 'btn-primary' %>"><%= account.is_active ? 'Disable' : 'Enable' %></button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr><td colspan="7" class="empty-state">No users found for the selected filters.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <% if (pagination.prevUrl) { %><a href="<%= pagination.prevUrl %>" class="btn btn-secondary">Previous</a><% } %>
+    <span>Page <%= pagination.page %> of <%= pagination.totalPages %></span>
+    <% if (pagination.nextUrl) { %><a href="<%= pagination.nextUrl %>" class="btn btn-secondary">Next</a><% } %>
+  </div>
+</section>

@@ -1,0 +1,43 @@
+﻿<section class="card stack">
+  <div class="section-header"><div><h2>Report infrastructure status</h2><p>Submit the current condition of park assets.</p></div></div>
+  <form method="POST" action="/infrastructure" class="form-grid two-col">
+    <div class="field-group">
+      <label for="parkId">Park</label>
+      <select id="parkId" name="parkId" required>
+        <option value="">Select park</option>
+        <% parks.forEach((park) => { %>
+          <option value="<%= park.id %>" <%= String(formData.parkId || '') === String(park.id) ? 'selected' : '' %>><%= park.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="assetName">Name</label>
+      <input id="assetName" type="text" name="name" value="<%= formData.name || '' %>" required>
+    </div>
+    <div class="field-group">
+      <label for="assetType">Type</label>
+      <select id="assetType" name="type" required>
+        <% ['road', 'fence', 'gate', 'building', 'water_point', 'communications', 'vehicle'].forEach((item) => { %>
+          <option value="<%= item %>" <%= formData.type === item ? 'selected' : '' %>><%= item %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="assetStatus">Status</label>
+      <select id="assetStatus" name="status" required>
+        <% ['operational', 'needs_maintenance', 'failed'].forEach((state) => { %>
+          <option value="<%= state %>" <%= formData.status === state ? 'selected' : '' %>><%= state %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-group full-width">
+      <label for="lastInspected">Last Inspected</label>
+      <input id="lastInspected" type="date" name="lastInspected" value="<%= formData.lastInspected || '' %>">
+    </div>
+    <div class="field-group full-width">
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="4"><%= formData.notes || '' %></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Save report</button>
+  </form>
+</section>

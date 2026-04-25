@@ -1,0 +1,130 @@
+<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>Field charts</h2>
+      <p>Live park intelligence for ranger operations and assigned-park response.</p>
+    </div>
+  </div>
+  <div class="chart-grid">
+    <article class="card chart-card">
+      <div class="section-header"><div><h2>Wildlife sightings by species</h2><p>Species observations in your assigned parks.</p></div></div>
+      <canvas id="wildlifeBySpeciesChart"></canvas>
+    </article>
+    <article class="card chart-card">
+      <div class="section-header"><div><h2>Environmental readings over time</h2><p>Recent field readings and environmental pattern.</p></div></div>
+      <canvas id="readingsOverTimeChart"></canvas>
+    </article>
+    <article class="card chart-card">
+      <div class="section-header"><div><h2>Alerts by type and severity</h2><p>Alert profile for assigned parks.</p></div></div>
+      <canvas id="alertsByTypeChart"></canvas>
+    </article>
+    <article class="card chart-card">
+      <div class="section-header"><div><h2>Infrastructure status breakdown</h2><p>Maintenance and failure reporting state.</p></div></div>
+      <canvas id="infrastructureStatusChart"></canvas>
+    </article>
+  </div>
+</section>
+
+<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>Quick links</h2>
+      <p>Jump directly into ranger workflows.</p>
+    </div>
+  </div>
+  <div class="link-grid">
+    <% quickLinks.forEach((link) => { %>
+      <a class="link-card" href="<%= link.href %>"><%= link.label %></a>
+    <% }) %>
+  </div>
+</section>
+
+<section class="page-grid two-column">
+  <section class="card stack">
+    <div class="section-header">
+      <div>
+        <h2>Assigned parks</h2>
+        <p>Current field scope. Sightings this week: <strong><%= sightingsThisWeek %></strong> · Readings this week: <strong><%= readingsThisWeek %></strong> · Issues: <strong><%= infrastructureIssues %></strong> · Active alerts: <strong><%= activeAlerts %></strong></p>
+      </div>
+      <div class="action-row">
+        <a href="/wildlife/new" class="btn btn-primary">New sighting</a>
+        <a href="/environment/new" class="btn btn-secondary">New reading</a>
+      </div>
+    </div>
+    <% if (assignedParks.length) { %>
+      <div class="stack tight">
+        <% assignedParks.forEach((park) => { %>
+          <div class="list-row">
+            <strong><%= park.name %></strong>
+            <span><%= park.location %>, <%= park.region %></span>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty-state">No park assignment found. Contact an administrator.</div>
+    <% } %>
+  </section>
+
+  <section class="card stack">
+    <div class="section-header">
+      <div>
+        <h2>Recent alerts</h2>
+        <p>Alerts affecting your assigned parks.</p>
+      </div>
+      <a href="/alerts" class="btn btn-secondary">Open alerts</a>
+    </div>
+    <% if (recentAlerts.length) { %>
+      <div class="stack tight">
+        <% recentAlerts.forEach((alert) => { %>
+          <div class="list-row">
+            <div>
+              <strong><%= alert.title %></strong>
+              <div class="muted-copy"><%= alert.park_name %> · <%= formatDate(alert.created_at) %></div>
+            </div>
+            <span class="badge <%= alert.severity === 'critical' ? 'error' : 'neutral' %>"><%= alert.severity %></span>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty-state">No active alerts at the moment.</div>
+    <% } %>
+  </section>
+</section>
+
+<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>Infrastructure issues</h2>
+      <p>Recent failed or maintenance items in your parks.</p>
+    </div>
+    <a href="/infrastructure/new" class="btn btn-secondary">Report issue</a>
+  </div>
+  <% if (recentIssues.length) { %>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Park</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Reported</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% recentIssues.forEach((item) => { %>
+            <tr>
+              <td><%= item.park_name %></td>
+              <td><%= item.name %></td>
+              <td><%= item.type %></td>
+              <td><span class="badge <%= item.status === 'failed' ? 'error' : 'warning' %>"><%= item.status %></span></td>
+              <td><%= formatDate(item.created_at) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <div class="empty-state">No infrastructure issues recorded yet.</div>
+  <% } %>
+</section>

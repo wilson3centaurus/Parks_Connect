@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parks Connect</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/public/css/styles.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            green: 'var(--green)',
+            'green-dark': 'var(--green-dark)',
+            'green-deep': 'var(--green-deep)',
+            yellow: 'var(--yellow)',
+            'yellow-deep': 'var(--yellow-deep)',
+            'gray-bg': 'var(--gray-bg)',
+            'gray-border': 'var(--gray-border)',
+            'gray-text': 'var(--gray-text)',
+            'text-dark': 'var(--text-dark)'
+          },
+          boxShadow: {
+            card: '0 10px 30px var(--shadow-color)'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-[var(--gray-bg)] text-[var(--text-dark)]">
+  <header class="bg-white shadow-card border-b border-[var(--gray-border)]">
+    <div class="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-[var(--green)] flex items-center justify-center text-white font-bold">PC</div>
+        <div>
+          <p class="font-semibold text-lg">Parks Connect</p>
+          <p class="text-sm text-[var(--gray-text)]">Unified conservation + tourism control</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <% if (user) { %>
+          <% const roleMap = { authority_admin: 'Authority Admin', environment_officer: 'Environment Officer', tourism_operator: 'Tourism Operator' }; %>
+          <span class="text-sm text-[var(--gray-text)]"><%= roleMap[user.role] || user.role %></span>
+          <a href="/logout" class="text-[var(--green)] font-semibold">Logout</a>
+        <% } %>
+      </div>
+    </div>
+  </header>
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <%- body %>
+  </main>
+</body>
+</html>

@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --green: #0f9d58;
+  --green-dark: #0b7a44;
+  --green-deep: #0c8449;
+  --yellow: #f4b400;
+  --yellow-deep: #c88c00;
+  --white: #ffffff;
+  --gray-bg: #f5f6f8;
+  --gray-border: #e5e7eb;
+  --gray-text: #4b5563;
+  --text-dark: #111827;
+  --bg-gradient-start: #f8fafc;
+  --bg-gradient-end: #eef2f7;
+  --hero-green-start: rgba(15, 157, 88, 0.95);
+  --hero-green-end: rgba(12, 132, 73, 0.9);
+  --hero-yellow-start: rgba(244, 180, 0, 0.35);
+  --hero-yellow-end: rgba(200, 140, 0, 0.25);
+  --shadow-color: rgba(0, 0, 0, 0.06);
+}
+
+body {
+  @apply bg-[var(--gray-bg)] text-[var(--text-dark)];
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.btn-primary {
+  @apply bg-[var(--green)] text-white px-4 py-2 rounded-lg hover:bg-[var(--green-dark)] transition;
+}
+
+.card {
+  @apply bg-white shadow-card rounded-xl p-4 border border-[var(--gray-border)];
+}

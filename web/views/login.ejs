@@ -1,0 +1,93 @@
+<% const activeMode = mode === 'register' ? 'register' : 'login'; %>
+<div class="max-w-2xl mx-auto bg-white shadow-card border border-[var(--gray-border)] rounded-2xl p-8">
+  <h1 class="text-2xl font-bold text-[var(--green-deep)] mb-2">Access Parks Connect</h1>
+  <p class="text-[var(--gray-text)] mb-4">Sign in to the correct Parks Connect portal or create a role-scoped account with the IT admin key.</p>
+
+  <div class="flex gap-3 mb-6">
+    <button type="button" data-toggle="login" class="flex-1 py-3 rounded-lg font-semibold border border-[var(--gray-border)] transition <%= activeMode === 'login' ? 'bg-[var(--green-light)] text-[var(--green-deep)] border-[var(--green)]' : 'text-[var(--gray-text)] hover:border-[var(--green)]' %>">Sign in</button>
+    <button type="button" data-toggle="register" class="flex-1 py-3 rounded-lg font-semibold border border-[var(--gray-border)] transition <%= activeMode === 'register' ? 'bg-[var(--green-light)] text-[var(--green-deep)] border-[var(--green)]' : 'text-[var(--gray-text)] hover:border-[var(--green)]' %>">Create account</button>
+  </div>
+
+  <% if (error) { %>
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4"><%= error %></div>
+  <% } %>
+
+  <div id="loginForm" class="<%= activeMode === 'login' ? '' : 'hidden' %>">
+    <form action="/login" method="POST" class="space-y-4">
+      <div>
+        <label class="block text-sm mb-1">Email</label>
+        <input name="email" type="email" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
+      </div>
+      <div>
+        <label class="block text-sm mb-1">Password</label>
+        <input name="password" type="password" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
+      </div>
+      <button type="submit" class="w-full bg-[var(--green)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--green-dark)] transition">Sign in</button>
+    </form>
+  </div>
+
+  <div id="registerForm" class="<%= activeMode === 'register' ? '' : 'hidden' %>">
+    <form action="/register" method="POST" class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm mb-1">Full name</label>
+          <input name="name" type="text" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Role</label>
+          <select name="role" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
+            <option value="authority_admin">Authority Admin</option>
+            <option value="environment_officer">Environment Officer</option>
+            <option value="tourism_operator">Tourism Operator</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm mb-1">Park ID (required for officer/operator)</label>
+        <input name="park_id" type="number" min="1" class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]" placeholder="e.g. 1">
+      </div>
+      <div>
+        <label class="block text-sm mb-1">Email</label>
+        <input name="email" type="email" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
+      </div>
+      <div>
+        <label class="block text-sm mb-1">Password</label>
+        <input name="password" type="password" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
+      </div>
+      <div>
+        <label class="block text-sm mb-1">IT admin key</label>
+        <input name="it_admin_key" type="password" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]" placeholder="Provided by IT">
+        <p class="text-xs text-[var(--gray-text)] mt-1">Creating an account requires the IT admin key.</p>
+      </div>
+      <button type="submit" class="w-full bg-[var(--green)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--green-dark)] transition">Create account</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const buttons = document.querySelectorAll('[data-toggle]');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+
+    function setMode(mode) {
+      const isLogin = mode === 'login';
+      loginForm.classList.toggle('hidden', !isLogin);
+      registerForm.classList.toggle('hidden', isLogin);
+      buttons.forEach((btn) => {
+        const active = btn.dataset.toggle === mode;
+        btn.classList.toggle('bg-[var(--green-light)]', active);
+        btn.classList.toggle('text-[var(--green-deep)]', active);
+        btn.classList.toggle('border-[var(--green)]', active);
+        btn.classList.toggle('text-[var(--gray-text)]', !active);
+      });
+      const search = mode === 'register' ? '?mode=register' : '?mode=login';
+      const newUrl = `${window.location.pathname}${search}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => setMode(btn.dataset.toggle));
+    });
+  })();
+</script>

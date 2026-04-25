@@ -1,0 +1,90 @@
+﻿<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>Feedback management</h2>
+      <p>Review tourist input and update case status where permitted.</p>
+    </div>
+  </div>
+  <form method="GET" action="/feedback/manage" class="form-grid four-col compact">
+    <select name="parkId">
+      <option value="">All parks</option>
+      <% parks.forEach((park) => { %>
+        <option value="<%= park.id %>" <%= String(filters.parkId || '') === String(park.id) ? 'selected' : '' %>><%= park.name %></option>
+      <% }) %>
+    </select>
+    <select name="status">
+      <option value="">All status</option>
+      <% ['pending', 'reviewed', 'resolved'].forEach((state) => { %>
+        <option value="<%= state %>" <%= filters.status === state ? 'selected' : '' %>><%= state %></option>
+      <% }) %>
+    </select>
+    <select name="category">
+      <option value="">All categories</option>
+      <% ['facilities', 'wildlife', 'staff', 'safety', 'general'].forEach((item) => { %>
+        <option value="<%= item %>" <%= filters.category === item ? 'selected' : '' %>><%= item %></option>
+      <% }) %>
+    </select>
+    <select name="limit">
+      <% [10, 25, 50].forEach((item) => { %>
+        <option value="<%= item %>" <%= pagination.limit === item ? 'selected' : '' %>><%= item %> per page</option>
+      <% }) %>
+    </select>
+    <button type="submit" class="btn btn-secondary">Apply</button>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Visitor</th>
+          <th>Park</th>
+          <th>Channel</th>
+          <th>Rating</th>
+          <th>Category</th>
+          <th>Message</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (feedback.length) { %>
+          <% feedback.forEach((item) => { %>
+            <tr>
+              <td>
+                <strong><%= item.visitor_name %></strong>
+                <div class="muted-copy"><%= item.visitor_email %></div>
+                <div class="muted-copy"><%= item.visitor_phone || '' %></div>
+              </td>
+              <td><%= item.park_name %></td>
+              <td><%= item.channel %></td>
+              <td><span class="badge neutral"><%= item.rating %>/5</span></td>
+              <td><%= item.category %></td>
+              <td><%= item.message %></td>
+              <td>
+                <% if (user.role === 'analyst') { %>
+                  <span class="badge neutral"><%= item.status %></span>
+                <% } else { %>
+                  <form method="POST" action="/feedback/<%= item.id %>/status" class="inline-form">
+                    <select name="status">
+                      <% ['pending', 'reviewed', 'resolved'].forEach((state) => { %>
+                        <option value="<%= state %>" <%= item.status === state ? 'selected' : '' %>><%= state %></option>
+                      <% }) %>
+                    </select>
+                    <button type="submit" class="btn btn-secondary">Update</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr><td colspan="7" class="empty-state">No feedback records found.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <% if (pagination.prevUrl) { %><a href="<%= pagination.prevUrl %>" class="btn btn-secondary">Previous</a><% } %>
+    <span>Page <%= pagination.page %> of <%= pagination.totalPages %></span>
+    <% if (pagination.nextUrl) { %><a href="<%= pagination.nextUrl %>" class="btn btn-secondary">Next</a><% } %>
+  </div>
+</section>

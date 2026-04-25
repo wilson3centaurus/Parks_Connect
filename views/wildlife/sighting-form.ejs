@@ -1,0 +1,55 @@
+﻿<section class="card stack">
+  <div class="section-header"><div><h2>Record wildlife sighting</h2><p>Capture field sightings with optional imagery.</p></div></div>
+  <form method="POST" action="/wildlife" enctype="multipart/form-data" class="form-grid two-col">
+    <div class="field-group">
+      <label for="parkId">Park</label>
+      <select id="parkId" name="parkId" required>
+        <option value="">Select park</option>
+        <% parks.forEach((park) => { %>
+          <option value="<%= park.id %>" <%= String(formData.parkId || '') === String(park.id) ? 'selected' : '' %>><%= park.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="category">Category</label>
+      <select id="category" name="category" required>
+        <% ['mammal', 'bird', 'reptile', 'amphibian', 'fish', 'insect', 'plant'].forEach((item) => { %>
+          <option value="<%= item %>" <%= formData.category === item ? 'selected' : '' %>><%= item %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="speciesName">Species Name</label>
+      <input id="speciesName" type="text" name="speciesName" value="<%= formData.speciesName || '' %>" required>
+    </div>
+    <div class="field-group">
+      <label for="commonName">Common Name</label>
+      <input id="commonName" type="text" name="commonName" value="<%= formData.commonName || '' %>" required>
+    </div>
+    <div class="field-group">
+      <label for="count">Count</label>
+      <input id="count" type="number" min="1" name="count" value="<%= formData.count || '' %>" required>
+    </div>
+    <div class="field-group">
+      <label for="sightingDate">Sighting Date</label>
+      <input id="sightingDate" type="datetime-local" name="sightingDate" value="<%= formData.sightingDate || '' %>" required>
+    </div>
+    <div class="field-group">
+      <label for="latitude">Latitude</label>
+      <input id="latitude" type="text" name="latitude" value="<%= formData.latitude || '' %>">
+    </div>
+    <div class="field-group">
+      <label for="longitude">Longitude</label>
+      <input id="longitude" type="text" name="longitude" value="<%= formData.longitude || '' %>">
+    </div>
+    <div class="field-group full-width">
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="4"><%= formData.notes || '' %></textarea>
+    </div>
+    <div class="field-group full-width">
+      <label for="photo">Photo (JPEG, PNG, WEBP, max 5MB)</label>
+      <input id="photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp">
+    </div>
+    <button type="submit" class="btn btn-primary">Save sighting</button>
+  </form>
+</section>

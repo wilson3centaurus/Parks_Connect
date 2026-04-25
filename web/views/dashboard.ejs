@@ -1,0 +1,522 @@
+<%
+  const activePark = (parks || []).find(p => String(p.id) === String(activeParkId));
+  const roleLabelMap = {
+    authority_admin: 'Authority Admin',
+    environment_officer: 'Environment Officer',
+    tourism_operator: 'Tourism Operator'
+  };
+  const roleLabel = roleLabelMap[role] || role;
+%>
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <p class="text-sm text-[var(--gray-text)]">Portal: <span><%= roleLabel %></span></p>
+    <h1 class="text-2xl font-bold text-[var(--green-deep)]">Parks Connect control center</h1>
+    <p class="text-sm text-[var(--gray-text)]">
+      <% if (role === 'authority_admin') { %>National oversight, planning, and reports.<% } %>
+      <% if (role === 'environment_officer') { %>Park-level data capture and incident response.<% } %>
+      <% if (role === 'tourism_operator') { %>Daily visitor logging and occupancy for your lodge/camp.<% } %>
+    </p>
+  </div>
+  <div class="flex items-center gap-4">
+    <% if (parks && parks.length) { %>
+      <form method="GET" action="/dashboard" class="flex items-center gap-2">
+        <input type="hidden" name="portal" value="<%= portal || '' %>">
+        <label class="text-xs text-[var(--gray-text)]">Park</label>
+        <select name="park_id" class="border border-[var(--gray-border)] rounded-lg px-3 py-2 text-sm">
+          <% parks.forEach(p => { %>
+            <option value="<%= p.id %>" <%= String(p.id) === String(activeParkId) ? 'selected' : '' %>><%= p.name %></option>
+          <% }) %>
+        </select>
+        <button class="btn-primary text-xs px-3">Switch</button>
+      </form>
+    <% } %>
+    <a href="/logout" class="text-sm font-semibold text-[var(--green)]">Logout</a>
+  </div>
+</div>
+
+<% if (role === 'authority_admin') { %>
+  <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Total visitors</p>
+      <p class="text-2xl font-bold"><%= summary?.totals?.visitors || 0 %></p>
+      <p class="text-xs text-[var(--gray-text)]">Across parks</p>
+    </div>
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Local vs Intl</p>
+      <p class="text-sm font-semibold"><%= summary?.totals?.localVisitors || 0 %> local / <%= summary?.totals?.internationalVisitors || 0 %> intl</p>
+      <p class="text-xs text-[var(--gray-text)]">Visitor mix</p>
+    </div>
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Avg occupancy</p>
+      <p class="text-2xl font-bold"><%= ((summary?.totals?.avgOccupancy || 0) * 100).toFixed(0) %>%</p>
+      <p class="text-xs text-[var(--gray-text)]">Rolling</p>
+    </div>
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Avg rating</p>
+      <p class="text-2xl font-bold"><%= (summary?.totals?.avgRating || 0).toFixed(1) %> / 5</p>
+      <p class="text-xs text-[var(--gray-text)]">Tourist + operator</p>
+    </div>
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Open alerts</p>
+      <p class="text-2xl font-bold"><%= (summary?.totals?.unresolvedAlerts || 0) + (summary?.totals?.openIssues || 0) %></p>
+      <p class="text-xs text-[var(--gray-text)]">Alerts + open issues</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="card lg:col-span-2 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">System-wide trends</h2>
+        <div class="text-xs text-[var(--gray-text)]"><%= activePark ? activePark.name : 'All parks' %></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <p class="text-sm font-semibold mb-2">Visitors (last 14 days)</p>
+          <div class="space-y-2">
+            <% (summary?.charts?.visitorsByDate || []).forEach(item => { %>
+              <div>
+                <div class="flex justify-between text-xs text-[var(--gray-text)]">
+                  <span><%= item.label %></span>
+                  <span><%= item.total %></span>
+                </div>
+                <div class="w-full bg-[var(--gray-border)] rounded-full h-2">
+                  <div class="h-2 rounded-full bg-[var(--green)]" style="width:<%= Math.min(100, (item.total/800)*100) %>%"></div>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+        <div>
+          <p class="text-sm font-semibold mb-2">Feedback trend</p>
+          <div class="space-y-2">
+            <% (summary?.charts?.feedbackTrend || []).forEach(item => { %>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-[var(--gray-text)]"><%= item.label %></span>
+                <div class="flex items-center gap-2">
+                  <div class="w-28 bg-[var(--gray-border)] rounded-full h-2">
+                    <div class="h-2 rounded-full bg-[var(--yellow)]" style="width:<%= (item.rating/5)*100 %>%"></div>
+                  </div>
+                  <span class="text-[var(--text-dark)] font-semibold"><%= Number(item.rating || 0).toFixed(1) %></span>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="text-sm font-semibold mb-2">Park performance</p>
+        <div class="space-y-2">
+          <% (summary?.parks?.visitorsByPark || []).map(p => ({...p, occupancy: p.occupancy || 0})).forEach(park => { %>
+            <div class="flex items-center justify-between text-sm">
+              <div>
+                <p class="font-semibold"><%= park.name || 'Unknown park' %></p>
+                <p class="text-xs text-[var(--gray-text)]">Visitors: <%= park.totalVisitors || 0 %></p>
+              </div>
+              <div class="text-right text-xs text-[var(--gray-text)]">Occ: <%= ((park.occupancy || 0) * 100).toFixed(0) %>%</div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+      <div>
+        <p class="text-sm font-semibold mb-2">Environmental status summary</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <% (summary?.parks?.envByCategory || []).forEach(item => { %>
+            <div class="border border-[var(--gray-border)] rounded-lg p-3">
+              <p class="text-sm font-semibold"><%= item.park || 'Unassigned' %></p>
+              <p class="text-xs text-[var(--gray-text)] capitalize"><%= item.category %></p>
+              <p class="text-xs text-[var(--gray-text)]"><%= item.total %> records</p>
+            </div>
+          <% }) %>
+          <% if (!summary?.parks?.envByCategory || summary.parks.envByCategory.length === 0) { %>
+            <p class="text-sm text-[var(--gray-text)]">No environmental logs yet.</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <div class="card space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold">Alerts</h2>
+        <span class="text-xs bg-[var(--yellow)] text-[var(--text-dark)] px-3 py-1 rounded-full"><%= notifications?.length || 0 %> open</span>
+      </div>
+      <div class="space-y-3 max-h-96 overflow-y-auto">
+        <% (notifications || []).forEach(note => { %>
+          <div class="border border-[var(--gray-border)] rounded-lg p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs uppercase text-[var(--gray-text)]"><%= note.type %> <% if (note.park_id) { %> · Park <%= note.park_id %><% } %></span>
+              <span class="text-xs <%= note.severity === 'critical' ? 'text-red-600' : 'text-[var(--green-deep)]' %>"><%= note.severity %></span>
+            </div>
+            <p class="text-sm font-semibold"><%= note.message %></p>
+            <p class="text-xs text-[var(--gray-text)]"><%= note.created_at %></p>
+          </div>
+        <% }) %>
+        <% if (!notifications || notifications.length === 0) { %>
+          <p class="text-sm text-[var(--gray-text)]">No alerts right now.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold">Reports + exports</h2>
+        <span class="text-xs text-[var(--gray-text)]">CSV / Excel / PDF</span>
+      </div>
+      <p class="text-sm text-[var(--gray-text)]">Export authority-ready reports from real Parks Connect data.</p>
+      <div class="flex flex-wrap gap-2">
+        <a class="btn-primary text-xs" href="/dashboard/reports/visitors?format=csv&portal=<%= portal || 'authority' %><%= activeParkId ? `&park_id=${activeParkId}` : '' %>">Export CSV</a>
+        <a class="text-xs px-4 py-2 rounded-lg border border-[var(--gray-border)]" href="/dashboard/reports/visitors?format=excel&portal=<%= portal || 'authority' %><%= activeParkId ? `&park_id=${activeParkId}` : '' %>">Export Excel</a>
+        <a class="text-xs px-4 py-2 rounded-lg border border-[var(--gray-border)]" href="/dashboard/reports/park-performance/pdf?portal=<%= portal || 'authority' %><%= activeParkId ? `&park_id=${activeParkId}` : '' %>">Park Performance PDF</a>
+        <a class="text-xs px-4 py-2 rounded-lg border border-[var(--gray-border)]" href="/dashboard/reports/environmental-status/pdf?portal=<%= portal || 'authority' %><%= activeParkId ? `&park_id=${activeParkId}` : '' %>">Environmental PDF</a>
+        <a class="text-xs px-4 py-2 rounded-lg border border-[var(--gray-border)]" href="/dashboard/reports/incident-response/pdf?portal=<%= portal || 'authority' %><%= activeParkId ? `&park_id=${activeParkId}` : '' %>">Incident Response PDF</a>
+      </div>
+      <div class="space-y-2">
+        <p class="text-sm font-semibold">Recent feedback</p>
+        <div class="max-h-44 overflow-y-auto divide-y divide-[var(--gray-border)]">
+          <% (feedback || []).slice(0,5).forEach(item => { %>
+            <div class="py-2 flex items-start justify-between">
+              <div>
+                <p class="font-semibold"><%= item.submitted_by || 'Guest' %> · <span class="capitalize"><%= item.type %></span></p>
+                <p class="text-xs text-[var(--gray-text)]"><%= item.comments %></p>
+              </div>
+              <div class="text-right text-xs text-[var(--gray-text)]">
+                <p class="font-semibold text-[var(--yellow-deep)]"><%= item.rating || '-' %></p>
+                <p class="capitalize"><%= item.status %></p>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+    <div class="card space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold">User & park management</h2>
+        <span class="text-xs text-[var(--gray-text)]">HQ only</span>
+      </div>
+      <form action="/dashboard/users" method="POST" class="grid grid-cols-2 gap-2">
+        <input class="border border-[var(--gray-border)] rounded-lg px-3 py-2" name="name" placeholder="Name" required>
+        <input class="border border-[var(--gray-border)] rounded-lg px-3 py-2" type="email" name="email" placeholder="Email" required>
+        <input class="border border-[var(--gray-border)] rounded-lg px-3 py-2" type="password" name="password" placeholder="Temp password" required>
+        <select name="role" class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+          <option value="authority_admin">Authority Admin</option>
+          <option value="environment_officer">Environment Officer</option>
+          <option value="tourism_operator">Tourism Operator</option>
+        </select>
+        <select name="park_id" class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2">
+          <option value="">Assign to park (optional)</option>
+          <% (parks || []).forEach(p => { %>
+            <option value="<%= p.id %>"><%= p.name %></option>
+          <% }) %>
+        </select>
+        <button class="btn-primary col-span-2">Create user</button>
+      </form>
+      <div>
+        <p class="text-sm font-semibold mb-2">Assignments</p>
+        <div class="max-h-40 overflow-y-auto space-y-2">
+          <% (assignments || []).forEach(item => { %>
+            <div class="border border-[var(--gray-border)] rounded-lg px-3 py-2 text-sm flex justify-between">
+              <div>
+                <p class="font-semibold"><%= item.user_name %> (<%= item.user_role %>)</p>
+                <p class="text-xs text-[var(--gray-text)]"><%= item.park_name %></p>
+              </div>
+              <p class="text-xs text-[var(--gray-text)] capitalize"><%= item.role %></p>
+            </div>
+          <% }) %>
+          <% if (!assignments || assignments.length === 0) { %>
+            <p class="text-sm text-[var(--gray-text)]">No park assignments yet.</p>
+          <% } %>
+        </div>
+      </div>
+      <div>
+        <p class="text-sm font-semibold mb-2">Alert thresholds</p>
+        <form action="/dashboard/thresholds" method="POST" class="grid grid-cols-2 gap-2">
+          <select name="park_id" class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2">
+            <option value="">Global</option>
+            <% (parks || []).forEach(p => { %>
+              <option value="<%= p.id %>" <%= String(p.id) === String(activeParkId) ? 'selected' : '' %>><%= p.name %></option>
+            <% }) %>
+          </select>
+          <select name="metric" class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+            <option value="visitors">Visitors</option>
+            <option value="occupancy">Occupancy</option>
+            <option value="environment">Environmental</option>
+            <option value="rating_drop_7d">7-Day Rating Drop</option>
+            <option value="incident_high">High-Severity Incident</option>
+          </select>
+          <select name="comparator" class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+            <option value=">">></option>
+            <option value=">=">>=</option>
+            <option value="<"><</option>
+            <option value="<="><=</option>
+          </select>
+          <input type="number" step="0.01" name="threshold" class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2" placeholder="Threshold value" required>
+          <button class="btn-primary col-span-2">Save threshold</button>
+        </form>
+        <div class="mt-2 text-xs text-[var(--gray-text)]">
+          <% (thresholds || []).forEach(t => { %>
+            <div><%= t.metric %> <%= t.comparator %> <%= t.threshold %> <% if (t.park_id) { %> · Park <%= t.park_id %><% } %></div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Visitor logs</h2>
+        <span class="text-xs text-[var(--gray-text)]"><%= visitorLogs?.length || 0 %></span>
+      </div>
+      <div class="space-y-3 max-h-64 overflow-y-auto">
+        <% (visitorLogs || []).forEach(item => { %>
+          <div class="border border-[var(--gray-border)] rounded-lg p-3">
+            <div class="flex justify-between text-sm">
+              <span class="font-semibold"><%= item.visit_date %></span>
+              <span class="text-[var(--gray-text)]"><%= item.operator_name || 'N/A' %></span>
+            </div>
+            <p class="text-sm">Visitors: <strong><%= item.visitors_count %></strong> · Local: <%= item.local_visitors %> · Intl: <%= item.international_visitors %></p>
+            <p class="text-xs text-[var(--gray-text)]">Occupancy: <%= item.occupancy_rate ? (item.occupancy_rate*100).toFixed(0) : '-' %>%</p>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Environmental logs</h2>
+        <span class="text-xs text-[var(--gray-text)]"><%= envLogs?.length || 0 %></span>
+      </div>
+      <div class="space-y-3 max-h-64 overflow-y-auto">
+        <% (envLogs || []).forEach(item => { %>
+          <div class="border border-[var(--gray-border)] rounded-lg p-3">
+            <div class="flex justify-between text-sm">
+              <span class="font-semibold capitalize"><%= item.category %></span>
+              <span class="text-xs uppercase <%= (item.severity || '').includes('high') || (item.severity || '').includes('critical') ? 'text-red-600' : 'text-[var(--gray-text)]' %>"><%= item.severity %></span>
+            </div>
+            <p class="text-sm text-[var(--gray-text)]"><%= item.description %></p>
+            <% if (item.location_lat) { %><p class="text-xs text-[var(--gray-text)]">Lat <%= item.location_lat %>, Lng <%= item.location_lng %></p><% } %>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+<% } else if (role === 'environment_officer') { %>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Park visitors</p>
+      <p class="text-2xl font-bold"><%= summary?.totals?.visitors || 0 %></p>
+      <p class="text-xs text-[var(--gray-text)]"><%= activePark?.name || '' %></p>
+    </div>
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Open alerts</p>
+      <p class="text-2xl font-bold"><%= summary?.totals?.unresolvedAlerts || 0 %></p>
+      <p class="text-xs text-[var(--gray-text)]">Threshold-triggered</p>
+    </div>
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Open feedback</p>
+      <p class="text-2xl font-bold"><%= summary?.totals?.openIssues || 0 %></p>
+      <p class="text-xs text-[var(--gray-text)]">Tourist + operator</p>
+    </div>
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Critical env logs</p>
+      <p class="text-2xl font-bold"><%= summary?.totals?.envCritical || 0 %></p>
+      <p class="text-xs text-[var(--gray-text)]">High / critical</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="card lg:col-span-2 space-y-4">
+      <h2 class="text-lg font-semibold">Data entry · <%= activePark?.name || 'Park' %></h2>
+      <form action="/dashboard/environment-log" method="POST" class="grid grid-cols-2 gap-3">
+        <input type="hidden" name="park_id" value="<%= activeParkId || '' %>">
+        <input name="incident_type" class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2" placeholder="Incident type (poaching, fire, etc)">
+        <input name="event_type" class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2" placeholder="Wildlife event type (mortality, conflict, sighting)">
+        <select name="category" class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+          <option value="wildlife">Wildlife sighting</option>
+          <option value="water">Water level</option>
+          <option value="waste">Waste</option>
+          <option value="incident">Incident response</option>
+        </select>
+        <select name="severity" class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+        <select name="status" class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2">
+          <option value="new">New</option>
+          <option value="assigned">Assigned</option>
+          <option value="in_progress">In progress</option>
+          <option value="resolved">Resolved</option>
+          <option value="escalated">Escalated</option>
+        </select>
+        <textarea name="description" rows="3" required class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2" placeholder="Log wildlife counts, water levels, waste status, or incident notes"></textarea>
+        <input name="location_lat" class="border border-[var(--gray-border)] rounded-lg px-3 py-2" placeholder="Latitude (optional)">
+        <input name="location_lng" class="border border-[var(--gray-border)] rounded-lg px-3 py-2" placeholder="Longitude (optional)">
+        <button class="btn-primary col-span-2">Save field report</button>
+      </form>
+
+      <div>
+        <p class="text-sm font-semibold mb-2">Incident response panel</p>
+        <div class="space-y-2 max-h-48 overflow-y-auto">
+          <% (envLogs || []).filter(l => (l.category || '').includes('incident')).forEach(item => { %>
+            <div class="border border-[var(--gray-border)] rounded-lg p-3 flex justify-between">
+              <div>
+                <p class="font-semibold capitalize"><%= item.incident_type || 'Incident' %></p>
+                <p class="text-xs text-[var(--gray-text)]"><%= item.description %></p>
+              </div>
+              <span class="text-xs uppercase <%= (item.severity || '').includes('high') || (item.severity || '').includes('critical') ? 'text-red-600' : 'text-[var(--gray-text)]' %>"><%= item.severity %></span>
+            </div>
+          <% }) %>
+          <% if (!(envLogs || []).some(l => (l.category || '').includes('incident'))) { %>
+            <p class="text-sm text-[var(--gray-text)]">No incidents captured yet.</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <div class="card space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold">Alerts</h2>
+        <span class="text-xs bg-[var(--yellow)] text-[var(--text-dark)] px-3 py-1 rounded-full"><%= notifications?.length || 0 %></span>
+      </div>
+      <div class="space-y-3 max-h-80 overflow-y-auto">
+        <% (notifications || []).forEach(note => { %>
+          <div class="border border-[var(--gray-border)] rounded-lg p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs uppercase text-[var(--gray-text)]"><%= note.type %></span>
+              <span class="text-xs <%= note.severity === 'critical' ? 'text-red-600' : 'text-[var(--green-deep)]' %>"><%= note.severity %></span>
+            </div>
+            <p class="text-sm font-semibold"><%= note.message %></p>
+            <p class="text-xs text-[var(--gray-text)]"><%= note.created_at %></p>
+          </div>
+        <% }) %>
+        <% if (!notifications || notifications.length === 0) { %>
+          <p class="text-sm text-[var(--gray-text)]">No active alerts for this park.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Tourist & operator reports</h2>
+        <span class="text-xs text-[var(--gray-text)]"><%= feedback?.length || 0 %></span>
+      </div>
+      <div class="space-y-3 max-h-72 overflow-y-auto">
+        <% (feedback || []).forEach(item => { %>
+          <div class="border border-[var(--gray-border)] rounded-lg p-3">
+            <div class="flex items-center justify-between text-sm">
+              <span class="font-semibold"><%= item.submitted_by || 'Guest' %> · <span class="capitalize"><%= item.type %></span></span>
+              <span class="text-xs text-[var(--yellow-deep)]"><%= item.rating || '-' %>/5</span>
+            </div>
+            <p class="text-sm text-[var(--gray-text)]"><%= item.comments %></p>
+            <form action="/dashboard/feedback/<%= item.id %>/status" method="POST" class="mt-2 flex items-center gap-2 text-xs">
+              <select name="status" class="border border-[var(--gray-border)] rounded px-2 py-1">
+                <option value="new" <%= item.status === 'new' ? 'selected' : '' %>>New</option>
+                <option value="assigned" <%= item.status === 'assigned' ? 'selected' : '' %>>Assigned</option>
+                <option value="in_progress" <%= item.status === 'in_progress' ? 'selected' : '' %>>In progress</option>
+                <option value="resolved" <%= item.status === 'resolved' ? 'selected' : '' %>>Resolved</option>
+                <option value="escalated" <%= item.status === 'escalated' ? 'selected' : '' %>>Escalated</option>
+              </select>
+              <button class="btn-primary text-xs px-3">Update</button>
+            </form>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Park activity</h2>
+        <span class="text-xs text-[var(--gray-text)]"><%= visitorLogs?.length || 0 %> visitor logs</span>
+      </div>
+      <div class="space-y-3 max-h-72 overflow-y-auto">
+        <% (visitorLogs || []).forEach(item => { %>
+          <div class="border border-[var(--gray-border)] rounded-lg p-3">
+            <div class="flex justify-between text-sm">
+              <span class="font-semibold"><%= item.visit_date %></span>
+              <span class="text-[var(--gray-text)]">Occupancy <%= item.occupancy_rate ? (item.occupancy_rate*100).toFixed(0) : '-' %>%</span>
+            </div>
+            <p class="text-sm">Visitors: <strong><%= item.visitors_count %></strong> · Local <%= item.local_visitors %> / Intl <%= item.international_visitors %></p>
+            <p class="text-xs text-[var(--gray-text)]"><%= item.facility_feedback || 'No notes' %></p>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+<% } else { %>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Park</p>
+      <p class="text-lg font-bold"><%= activePark?.name || 'Assigned park' %></p>
+      <p class="text-xs text-[var(--gray-text)]">Tourism operator portal</p>
+    </div>
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Visitors logged</p>
+      <p class="text-2xl font-bold"><%= operatorSummary?.totalVisitors || 0 %></p>
+      <p class="text-xs text-[var(--gray-text)]">Totals for your park</p>
+    </div>
+    <div class="card">
+      <p class="text-xs text-[var(--gray-text)]">Average occupancy</p>
+      <p class="text-2xl font-bold"><%= visitorLogs && visitorLogs.length ? ((operatorSummary?.totalStays || 0) / visitorLogs.length * 100).toFixed(0) : '0' %>%</p>
+      <p class="text-xs text-[var(--gray-text)]">Last <%= visitorLogs?.length || 0 %> entries</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="card lg:col-span-2 space-y-4">
+      <h2 class="text-lg font-semibold">Daily visitor logging</h2>
+      <form action="/dashboard/visitor-log" method="POST" class="grid grid-cols-2 gap-3">
+        <input type="hidden" name="park_id" value="<%= activeParkId || '' %>">
+        <input type="date" name="visit_date" required class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2">
+        <input type="number" name="local_visitors" min="0" placeholder="Local visitors" class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+        <input type="number" name="international_visitors" min="0" placeholder="International visitors" class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+        <input type="number" name="units_available" min="0" placeholder="Units available" class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+        <input type="number" name="units_occupied" min="0" placeholder="Units occupied" class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+        <input type="number" step="0.01" name="occupancy_rate" min="0" max="1" placeholder="Occupancy (0-1)" class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2">
+        <textarea name="facility_feedback" rows="3" placeholder="Facility or service issues" class="border border-[var(--gray-border)] rounded-lg px-3 py-2 col-span-2"></textarea>
+        <button class="btn-primary col-span-2">Save visitor log</button>
+      </form>
+      <div>
+        <p class="text-sm font-semibold mb-2">Occupancy + visitor history</p>
+        <div class="space-y-3 max-h-72 overflow-y-auto">
+          <% (visitorLogs || []).forEach(item => { %>
+            <div class="border border-[var(--gray-border)] rounded-lg p-3">
+              <div class="flex justify-between text-sm">
+                <span class="font-semibold"><%= item.visit_date %></span>
+                <span class="text-[var(--gray-text)]"><%= item.operator_name || 'You' %></span>
+              </div>
+              <p class="text-sm">Visitors: <strong><%= item.visitors_count %></strong> · Local <%= item.local_visitors %> / Intl <%= item.international_visitors %></p>
+              <p class="text-xs text-[var(--gray-text)]">Occupancy: <%= item.occupancy_rate ? (item.occupancy_rate*100).toFixed(0) : '-' %>%</p>
+              <p class="text-xs text-[var(--gray-text)]"><%= item.facility_feedback || 'No notes' %></p>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+    <div class="card space-y-4">
+      <h2 class="font-semibold">Feedback to HQ</h2>
+      <form action="/dashboard/operator-feedback" method="POST" class="space-y-2">
+        <input type="hidden" name="park_id" value="<%= activeParkId || '' %>">
+        <label class="block text-sm">Rating</label>
+        <input type="number" name="rating" min="1" max="5" value="4" class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-2">
+        <textarea name="comments" rows="3" placeholder="Facility feedback or issues" class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-2" required></textarea>
+        <button class="w-full bg-[var(--yellow)] text-[var(--text-dark)] py-2 rounded-lg">Send</button>
+      </form>
+      <div>
+        <p class="text-sm font-semibold mb-2">Your recent submissions</p>
+        <div class="space-y-2 max-h-48 overflow-y-auto">
+          <% (feedback || []).filter(f => f.type === 'tourism_operator').forEach(item => { %>
+            <div class="border border-[var(--gray-border)] rounded-lg px-3 py-2">
+              <div class="flex justify-between text-xs text-[var(--gray-text)]">
+                <span><%= item.submitted_by || 'You' %></span>
+                <span>Rating <%= item.rating || '-' %></span>
+              </div>
+              <p class="text-sm"><%= item.comments %></p>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% } %>
+

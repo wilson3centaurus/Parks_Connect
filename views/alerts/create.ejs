@@ -1,0 +1,39 @@
+﻿<section class="card stack">
+  <div class="section-header"><div><h2>Create alert</h2><p>Raise a manual operational alert for the selected park.</p></div></div>
+  <form method="POST" action="/alerts" class="form-grid two-col">
+    <div class="field-group">
+      <label for="parkId">Park</label>
+      <select id="parkId" name="parkId" required>
+        <option value="">Select park</option>
+        <% parks.forEach((park) => { %>
+          <option value="<%= park.id %>" <%= String(formData.parkId || '') === String(park.id) ? 'selected' : '' %>><%= park.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="type">Type</label>
+      <select id="type" name="type" required>
+        <% ['drought', 'infrastructure_failure', 'security_incident', 'capacity_threshold', 'wildlife_emergency', 'weather'].forEach((item) => { %>
+          <option value="<%= item %>" <%= formData.type === item ? 'selected' : '' %>><%= item %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="severity">Severity</label>
+      <select id="severity" name="severity" required>
+        <% ['low', 'medium', 'high', 'critical'].forEach((item) => { %>
+          <option value="<%= item %>" <%= formData.severity === item ? 'selected' : '' %>><%= item %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field-group full-width">
+      <label for="title">Title</label>
+      <input id="title" type="text" name="title" value="<%= formData.title || '' %>" required>
+    </div>
+    <div class="field-group full-width">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="5" required><%= formData.description || '' %></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Create alert</button>
+  </form>
+</section>

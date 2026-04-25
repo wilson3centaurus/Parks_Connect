@@ -1,0 +1,30 @@
+﻿<% if (!embedded) { %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || 'Error' %> | ZimParks Platform</title>
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+  <main class="auth-shell">
+<% } %>
+    <section class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-mark"><img src="/images/logo.png" alt="ZimParks logo"></div>
+        <div>
+          <h1><%= title || 'Error' %></h1>
+          <p><%= message %></p>
+        </div>
+      </div>
+      <div class="auth-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/login">Login</a>
+      </div>
+    </section>
+<% if (!embedded) { %>
+  </main>
+</body>
+</html>
+<% } %>

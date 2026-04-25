@@ -1,0 +1,42 @@
+﻿<section class="stats-grid analytics-summary">
+  <article class="stat-card">
+    <span class="stat-label">Total Sightings This Month</span>
+    <strong class="stat-value" data-summary="sightings"><%= totalSightingsThisMonth %></strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Average Feedback Rating</span>
+    <strong class="stat-value" data-summary="rating"><%= Number(averageFeedbackRating || 0).toFixed(2) %></strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Active Alerts</span>
+    <strong class="stat-value" data-summary="alerts"><%= activeAlerts %></strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Total Visitors This Month</span>
+    <strong class="stat-value" data-summary="visitors"><%= totalVisitorsThisMonth %></strong>
+  </article>
+</section>
+
+<section class="card stack">
+  <div class="section-header">
+    <div>
+      <h2>Exports</h2>
+      <p>Download CSV datasets for deeper analysis.</p>
+    </div>
+    <div class="action-row">
+      <a href="/analytics/export?dataset=wildlife" class="btn btn-secondary">Wildlife CSV</a>
+      <a href="/analytics/export?dataset=environment" class="btn btn-secondary">Environment CSV</a>
+      <a href="/analytics/export?dataset=alerts" class="btn btn-secondary">Alerts CSV</a>
+      <a href="/analytics/export?dataset=visitors" class="btn btn-secondary">Visitors CSV</a>
+    </div>
+  </div>
+</section>
+
+<section class="chart-grid">
+  <article class="card chart-card"><div class="section-header"><div><h2>Wildlife sightings by species</h2><p>Top 10 species volume.</p></div></div><canvas id="wildlifeBySpeciesChart"></canvas></article>
+  <article class="card chart-card"><div class="section-header"><div><h2>Environmental readings over time</h2><p>30-day trend by reading type.</p></div></div><canvas id="readingsOverTimeChart"></canvas></article>
+  <article class="card chart-card"><div class="section-header"><div><h2>Feedback ratings distribution</h2><p>Scores from 1 to 5.</p></div></div><canvas id="feedbackRatingsChart"></canvas></article>
+  <article class="card chart-card"><div class="section-header"><div><h2>Alerts by type and severity</h2><p>Operational alert volumes.</p></div></div><canvas id="alertsByTypeChart"></canvas></article>
+  <article class="card chart-card"><div class="section-header"><div><h2>Visitor trends per park</h2><p>Last 30 days.</p></div></div><canvas id="visitorTrendsChart"></canvas></article>
+  <article class="card chart-card"><div class="section-header"><div><h2>Infrastructure status breakdown</h2><p>Current reported state.</p></div></div><canvas id="infrastructureStatusChart"></canvas></article>
+</section>
