@@ -23,9 +23,7 @@ class ApiService {
   static String _resolveBaseUrl() {
     const env = String.fromEnvironment('API_BASE');
     if (env.isNotEmpty) return env;
-    // Android emulators reach the host machine at 10.0.2.2; physical devices need the LAN IP.
-    if (Platform.isAndroid) return 'http://10.0.2.2:4000';
-    return 'http://localhost:4000';
+    return 'https://parks-connect-api.vercel.app';
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {

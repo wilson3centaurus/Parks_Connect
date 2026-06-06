@@ -9,7 +9,7 @@ dotenv.config();
 async function upsertUser(db, { name, email, passwordHash, role }) {
   const existing = await db.get(`SELECT id FROM users WHERE email = ?`, [email]);
   if (existing) {
-    await db.run(`UPDATE users SET name = ?, role = ? WHERE id = ?`, [name, role, existing.id]);
+    await db.run(`UPDATE users SET name = ?, password = ?, role = ? WHERE id = ?`, [name, passwordHash, role, existing.id]);
     return existing.id;
   }
 
@@ -327,6 +327,29 @@ async function ensureSampleData(db, parksByCode, users) {
     }
   }
 
+  const exportCount = await db.get(`SELECT COUNT(*) AS total FROM report_exports`);
+  if ((exportCount?.total || 0) < 4) {
+    const exportSamples = [
+      [parksByCode.HNP, 'visitor-summary', '/exports/visitor_summary_hnp_may_2026.pdf', 'https://parks-connect-api.vercel.app/exports/visitor_summary_hnp_may_2026.pdf', users.adminId],
+      [parksByCode.MP, 'environmental-status', '/exports/environmental_status_mp_may_2026.pdf', 'https://parks-connect-api.vercel.app/exports/environmental_status_mp_may_2026.pdf', users.hqAnalystId],
+      [parksByCode.VF, 'revenue-report', '/exports/revenue_report_vf_may_2026.pdf', 'https://parks-connect-api.vercel.app/exports/revenue_report_vf_may_2026.pdf', users.sysadminId],
+      [parksByCode.HNP, 'blockchain-audit-trail', '/exports/blockchain_audit_hnp_may_2026.pdf', 'https://parks-connect-api.vercel.app/exports/blockchain_audit_hnp_may_2026.pdf', users.parkManagerId]
+    ];
+
+    for (const sample of exportSamples) {
+      const existing = await db.get(
+        `SELECT id FROM report_exports WHERE park_id = ? AND report_type = ? AND file_path = ?`,
+        [sample[0], sample[1], sample[2]]
+      );
+      if (existing) continue;
+      await db.run(
+        `INSERT INTO report_exports (park_id, report_type, file_path, file_url, generated_by)
+         VALUES (?, ?, ?, ?, ?)`,
+        sample
+      );
+    }
+  }
+
   await createAlert({
     parkId: parksByCode.HNP,
     sourceType: 'seed',
@@ -382,8 +405,8 @@ async function seed() {
   const parksByCode = Object.fromEntries(parkRows.map((row) => [row.code, row.id]));
 
   const adminPasswordHash = await bcrypt.hash(process.env.ADMIN_DEFAULT_PASSWORD || 'changeme123', 12);
-  const officerPasswordHash = await bcrypt.hash('env12345', 12);
-  const operatorPasswordHash = await bcrypt.hash('tour12345', 12);
+  const demoPassword = process.env.DEMO_USER_PASSWORD || 'demo1234';
+  const demoPasswordHash = await bcrypt.hash(demoPassword, 12);
 
   const adminId = await upsertUser(db, {
     name: 'Authority Admin',
@@ -395,35 +418,79 @@ async function seed() {
   const operatorNorth = await upsertUser(db, {
     name: 'Tourism Operator North',
     email: 'operator1@parksconnect.local',
-    passwordHash: operatorPasswordHash,
+    passwordHash: demoPasswordHash,
     role: 'tourism_operator'
   });
 
   const operatorWest = await upsertUser(db, {
     name: 'Tourism Operator West',
     email: 'operator2@parksconnect.local',
-    passwordHash: operatorPasswordHash,
+    passwordHash: demoPasswordHash,
     role: 'tourism_operator'
   });
 
   const officerNorth = await upsertUser(db, {
     name: 'Environment Officer North',
     email: 'officer1@parksconnect.local',
-    passwordHash: officerPasswordHash,
+    passwordHash: demoPasswordHash,
     role: 'environment_officer'
   });
 
   const officerWest = await upsertUser(db, {
     name: 'Environment Officer West',
     email: 'officer2@parksconnect.local',
-    passwordHash: officerPasswordHash,
+    passwordHash: demoPasswordHash,
     role: 'environment_officer'
+  });
+
+  const sysadminId = await upsertUser(db, {
+    name: 'System Administrator Demo',
+    email: 'sysadmin.demo@parksconnect.local',
+    passwordHash: demoPasswordHash,
+    role: 'authority_admin'
+  });
+
+  const hqAnalystId = await upsertUser(db, {
+    name: 'HQ Analyst Demo',
+    email: 'hqanalyst.demo@parksconnect.local',
+    passwordHash: demoPasswordHash,
+    role: 'authority_admin'
+  });
+
+  const parkManagerId = await upsertUser(db, {
+    name: 'Park Manager Demo',
+    email: 'parkmanager.demo@parksconnect.local',
+    passwordHash: demoPasswordHash,
+    role: 'authority_admin'
+  });
+
+  const rangerId = await upsertUser(db, {
+    name: 'Ranger Demo',
+    email: 'ranger.demo@parksconnect.local',
+    passwordHash: demoPasswordHash,
+    role: 'environment_officer'
+  });
+
+  const receptionId = await upsertUser(db, {
+    name: 'Reception Demo',
+    email: 'reception.demo@parksconnect.local',
+    passwordHash: demoPasswordHash,
+    role: 'tourism_operator'
+  });
+
+  const touristId = await upsertUser(db, {
+    name: 'Tourist Demo',
+    email: 'tourist.demo@parksconnect.local',
+    passwordHash: demoPasswordHash,
+    role: 'tourist'
   });
 
   await ensureAssignment(db, operatorNorth, parksByCode.HNP, 'tourism_operator');
   await ensureAssignment(db, operatorWest, parksByCode.MP, 'tourism_operator');
   await ensureAssignment(db, officerNorth, parksByCode.HNP, 'environment_officer');
   await ensureAssignment(db, officerWest, parksByCode.VF, 'environment_officer');
+  await ensureAssignment(db, rangerId, parksByCode.MP, 'environment_officer');
+  await ensureAssignment(db, receptionId, parksByCode.VF, 'tourism_operator');
 
   await db.run(
     `INSERT INTO alert_thresholds (metric, threshold, comparator, park_id)
@@ -478,11 +545,28 @@ async function seed() {
 
   await ensureSampleData(db, parksByCode, {
     adminId,
+    sysadminId,
+    hqAnalystId,
+    parkManagerId,
     operatorNorth,
     operatorWest,
     officerNorth,
-    officerWest
+    officerWest,
+    rangerId,
+    receptionId,
+    touristId
   });
+
+  console.log('Demo accounts ready:');
+  console.log(`- admin@parksconnect.local / ${process.env.ADMIN_DEFAULT_PASSWORD || 'changeme123'} (authority_admin)`);
+  console.log(`- sysadmin.demo@parksconnect.local / ${demoPassword} (sysadmin demo -> authority_admin)`);
+  console.log(`- hqanalyst.demo@parksconnect.local / ${demoPassword} (hq analyst demo -> authority_admin)`);
+  console.log(`- parkmanager.demo@parksconnect.local / ${demoPassword} (park manager demo -> authority_admin)`);
+  console.log(`- officer1@parksconnect.local / ${demoPassword} (environment_officer)`);
+  console.log(`- ranger.demo@parksconnect.local / ${demoPassword} (ranger demo -> environment_officer)`);
+  console.log(`- operator1@parksconnect.local / ${demoPassword} (tourism_operator)`);
+  console.log(`- reception.demo@parksconnect.local / ${demoPassword} (reception demo -> tourism_operator)`);
+  console.log(`- tourist.demo@parksconnect.local / ${demoPassword} (tourist mobile account)`);
 }
 
 seed()
