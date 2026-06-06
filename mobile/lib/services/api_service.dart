@@ -8,8 +8,16 @@ import '../models/environment_log.dart';
 import '../models/feedback_entry.dart';
 
 class ApiService {
-  ApiService({String? baseUrl}) : baseUrl = baseUrl ?? _resolveBaseUrl();
+  ApiService({String? baseUrl}) : baseUrl = _normalizeBaseUrl(baseUrl ?? _resolveBaseUrl());
   final String baseUrl;
+
+  static String _normalizeBaseUrl(String value) {
+    final trimmed = value.trim();
+    if (trimmed.endsWith('/')) {
+      return trimmed.substring(0, trimmed.length - 1);
+    }
+    return trimmed;
+  }
 
   // Prefer a compile-time API_BASE override; otherwise choose a sensible default per platform.
   static String _resolveBaseUrl() {
@@ -27,7 +35,33 @@ class ApiService {
       body: jsonEncode({'email': email, 'password': password}),
     );
     if (resp.statusCode >= 400) {
-      throw Exception('Login failed (${resp.statusCode})');
+      throw Exception(_extractMessage(resp, fallback: 'Login failed (${resp.statusCode})'));
+    }
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> selfRegister({
+    required String name,
+    required String email,
+    required String password,
+    required String role,
+    required String itAdminKey,
+    int? parkId,
+  }) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/api/auth/self-register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': name,
+        'email': email,
+        'password': password,
+        'role': role,
+        'it_admin_key': itAdminKey,
+        'park_id': parkId,
+      }),
+    );
+    if (resp.statusCode >= 400) {
+      throw Exception(_extractMessage(resp, fallback: 'Registration failed (${resp.statusCode})'));
     }
     return jsonDecode(resp.body) as Map<String, dynamic>;
   }
@@ -182,5 +216,20 @@ class ApiService {
         throw Exception('Failed to submit log (${resp.statusCode})');
       }
     }
+  }
+
+  String _extractMessage(http.Response resp, {required String fallback}) {
+    try {
+      final parsed = jsonDecode(resp.body);
+      if (parsed is Map<String, dynamic>) {
+        final message = parsed['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message.trim();
+        }
+      }
+    } catch (_) {
+      // ignore json parse errors
+    }
+    return fallback;
   }
 }

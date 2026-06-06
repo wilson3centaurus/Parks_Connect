@@ -13,7 +13,8 @@ import '../services/local_cache_service.dart';
 import '../widgets/app_theme.dart';
 
 class TouristFeedbackScreen extends StatefulWidget {
-  const TouristFeedbackScreen({super.key, required this.parkId, required this.parkName});
+  const TouristFeedbackScreen(
+      {super.key, required this.parkId, required this.parkName});
 
   final int parkId;
   final String parkName;
@@ -47,11 +48,13 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
 
   Future<void> _getLocation() async {
     final permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       ActivityLogger.action('Location permission denied');
       return;
     }
-    final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
     setState(() => _position = pos);
     ActivityLogger.action('Location fetched', data: {
       'lat': pos.latitude,
@@ -93,14 +96,16 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
       'hasPhoto': _imageFile != null,
     });
     try {
-      await api.submitFeedback(entry, photo: _imageFile, deviceId: state.deviceId);
+      await api.submitFeedback(entry,
+          photo: _imageFile, deviceId: state.deviceId);
       if (!mounted) return;
       ActivityLogger.action('Feedback sent online');
       await showDialog(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('Thank you'),
-          content: const Text('Your park experience was submitted successfully.'),
+          content:
+              const Text('Your park experience was submitted successfully.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -114,11 +119,12 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
       await state.loadPendingCount();
       if (!mounted) return;
       ActivityLogger.action('Feedback saved offline');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Saved offline. We will sync when online.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Saved offline. We will sync when online.')));
     } finally {
-      if (!mounted) return;
-      setState(() => _submitting = false);
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
@@ -138,7 +144,7 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.green.withOpacity(0.08),
+                  color: AppColors.green.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -147,7 +153,10 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text('Park: ${widget.parkName}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w700)),
                     ),
                   ],
                 ),
@@ -155,7 +164,10 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
               const SizedBox(height: 12),
               Text(
                 'Share your experience',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -195,7 +207,8 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
                       label: _rating.toStringAsFixed(1),
                       onChanged: (val) {
                         setState(() => _rating = val);
-                        ActivityLogger.action('Rating changed', data: {'rating': val});
+                        ActivityLogger.action('Rating changed',
+                            data: {'rating': val});
                       },
                     ),
                   ),
@@ -203,7 +216,7 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
               ),
               const SizedBox(height: 12),
               SwitchListTile(
-                activeColor: AppColors.green,
+                activeThumbColor: AppColors.green,
                 title: const Text('Include GPS location'),
                 subtitle: Text(_position != null
                     ? 'Lat: ${_position!.latitude.toStringAsFixed(4)}, Lng: ${_position!.longitude.toStringAsFixed(4)}'
@@ -211,7 +224,8 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
                 value: _includeLocation,
                 onChanged: (v) async {
                   setState(() => _includeLocation = v);
-                  ActivityLogger.action('Location toggle', data: {'enabled': v});
+                  ActivityLogger.action('Location toggle',
+                      data: {'enabled': v});
                   if (v) {
                     await _getLocation();
                   } else {
@@ -228,7 +242,9 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
                     label: const Text('Add Photo'),
                   ),
                   const SizedBox(width: 12),
-                  if (_imageFile != null) Text('Photo attached', style: TextStyle(color: AppColors.greenDeep)),
+                  if (_imageFile != null)
+                    const Text('Photo attached',
+                        style: TextStyle(color: AppColors.greenDeep)),
                 ],
               ),
               const SizedBox(height: 24),
@@ -239,7 +255,8 @@ class _TouristFeedbackScreenState extends State<TouristFeedbackScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.green,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _submitting
                       ? const CircularProgressIndicator.adaptive()

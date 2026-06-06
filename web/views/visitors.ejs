@@ -1,0 +1,115 @@
+<%
+  const registrations = visitorRegistrations || [];
+  const activeReceipt = registrations[0] || {};
+%>
+
+<div class="zim-success-banner">
+  <strong><i class="fa-solid fa-circle-check"></i> Visitor registered successfully! Visitor Reference: <span class="mono"><%= activeReceipt.reference || 'ZP-VIS-2025-0519-000124' %></span></strong>
+  <button class="btn btn-link text-decoration-none text-success p-0"><i class="fa-solid fa-xmark fs-4"></i></button>
+</div>
+
+<section class="zim-page-header">
+  <h1>Visitor Registration</h1>
+</section>
+
+<section class="zim-grid-2 mb-4">
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <h2><i class="fa-solid fa-user"></i> Visitor Details</h2>
+    </div>
+    <form class="zim-form-grid">
+      <div class="zim-field">
+        <label>First Name</label>
+        <input value="John">
+      </div>
+      <div class="zim-field">
+        <label>Last Name</label>
+        <input value="Doe">
+      </div>
+      <div class="zim-field">
+        <label>Nationality</label>
+        <select><option>United States</option></select>
+      </div>
+      <div class="zim-field">
+        <label>ID Number / Passport</label>
+        <input value="A12345678">
+      </div>
+      <div class="zim-field">
+        <label>Vehicle Registration (Optional)</label>
+        <input value="ABC123GP">
+      </div>
+      <div class="zim-field">
+        <label>Group Size</label>
+        <input value="2">
+      </div>
+      <div class="zim-field zim-field--full">
+        <div class="zim-form-note"><i class="fa-solid fa-circle-info"></i> Please ensure all details are accurate before submitting.</div>
+      </div>
+    </form>
+  </article>
+
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <h2><i class="fa-solid fa-calculator"></i> Fee Calculator</h2>
+    </div>
+    <form class="zim-form-grid">
+      <div class="zim-field zim-field--full">
+        <label>Park</label>
+        <input value="Victoria Falls National Park">
+      </div>
+      <div class="zim-field zim-field--full">
+        <label>Category</label>
+        <input value="International Adult">
+      </div>
+      <div class="zim-field zim-field--full">
+        <label>Visit Type</label>
+        <select><option>Day Visit</option></select>
+      </div>
+      <div class="zim-field zim-field--full">
+        <label>Fee Amount (USD)</label>
+        <input value="$ 20.00">
+      </div>
+      <div class="zim-field zim-field--full">
+        <button class="zim-button w-100" type="button"><i class="fa-solid fa-print"></i> Generate Receipt</button>
+      </div>
+    </form>
+  </article>
+</section>
+
+<article class="zim-card">
+  <div class="zim-section-title">
+    <h2><i class="fa-solid fa-clipboard-list"></i> Recent Registrations</h2>
+  </div>
+  <div class="zim-table-wrap">
+    <table class="table zim-table">
+      <thead>
+        <tr>
+          <th>Receipt No.</th>
+          <th>Visitor Name</th>
+          <th>Nationality</th>
+          <th>Category</th>
+          <th>Visit Type</th>
+          <th>Group Size</th>
+          <th>Fee (USD)</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% registrations.forEach((row) => { %>
+          <tr>
+            <td class="mono"><%= row.receiptNo %></td>
+            <td><%= row.visitorName %></td>
+            <td><%= row.nationality %></td>
+            <td><%= row.category %></td>
+            <td><%= row.visitType %></td>
+            <td><%= row.groupSize %></td>
+            <td class="text-success">$<%= Number(row.fee || 0).toFixed(2) %></td>
+            <td><%= row.dateLabel %></td>
+            <td><a href="#" class="text-success text-decoration-none"><i class="fa-regular fa-eye"></i> View</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</article>

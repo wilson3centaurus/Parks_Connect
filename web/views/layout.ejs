@@ -4,52 +4,146 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Parks Connect</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/public/css/styles.css">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            green: 'var(--green)',
-            'green-dark': 'var(--green-dark)',
-            'green-deep': 'var(--green-deep)',
-            yellow: 'var(--yellow)',
-            'yellow-deep': 'var(--yellow-deep)',
-            'gray-bg': 'var(--gray-bg)',
-            'gray-border': 'var(--gray-border)',
-            'gray-text': 'var(--gray-text)',
-            'text-dark': 'var(--text-dark)'
-          },
-          boxShadow: {
-            card: '0 10px 30px var(--shadow-color)'
-          }
-        }
-      }
-    }
-  </script>
 </head>
-<body class="min-h-screen bg-[var(--gray-bg)] text-[var(--text-dark)]">
-  <header class="bg-white shadow-card border-b border-[var(--gray-border)]">
-    <div class="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
-      <div class="flex items-center gap-3">
-        <div class="h-10 w-10 rounded-xl bg-[var(--green)] flex items-center justify-center text-white font-bold">PC</div>
-        <div>
-          <p class="font-semibold text-lg">Parks Connect</p>
-          <p class="text-sm text-[var(--gray-text)]">Unified conservation + tourism control</p>
+<body class="zim-body">
+  <% const roleMap = { authority_admin: 'HQ Admin', environment_officer: 'Park Manager', tourism_operator: 'Reception Staff' }; %>
+  <% const roleLabel = roleMap[user?.role] || user?.role || 'Guest'; %>
+  <% const initials = user?.name ? user.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase() : 'ZP'; %>
+  <% const currentSection = section || 'dashboard'; %>
+
+  <% if (user) { %>
+    <div class="zim-shell">
+      <aside class="zim-sidebar d-none d-lg-flex">
+        <div class="zim-sidebar-brand">
+          <img src="/public/images/logo.png" alt="ZimParks logo" class="zim-brand-logo">
+          <div>
+            <h1>ZIMPARKS</h1>
+            <p><%= user.role === 'tourism_operator' ? 'WILDLIFE · HERITAGE · HOSPITALITY' : 'HQ ANALYTICS DASHBOARD' %></p>
+          </div>
+        </div>
+
+        <nav class="zim-nav">
+          <a class="zim-nav-link <%= currentSection === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+            <i class="fa-solid fa-house"></i>
+            <span>Dashboard</span>
+          </a>
+          <a class="zim-nav-link <%= currentSection === 'parks' ? 'active' : '' %>" href="/dashboard">
+            <i class="fa-solid fa-tree"></i>
+            <span>Parks</span>
+          </a>
+          <a class="zim-nav-link <%= currentSection === 'revenue' ? 'active' : '' %>" href="/dashboard/revenue">
+            <i class="fa-solid fa-dollar-sign"></i>
+            <span>Revenue</span>
+          </a>
+          <a class="zim-nav-link <%= currentSection === 'environment' ? 'active' : '' %>" href="/dashboard/alerts">
+            <i class="fa-solid fa-leaf"></i>
+            <span>Environment</span>
+          </a>
+          <a class="zim-nav-link <%= currentSection === 'maintenance' ? 'active' : '' %>" href="/dashboard/alerts">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+            <span>Maintenance</span>
+          </a>
+          <a class="zim-nav-link <%= currentSection === 'reports' ? 'active' : '' %>" href="/dashboard/revenue">
+            <i class="fa-solid fa-chart-column"></i>
+            <span>Reports</span>
+          </a>
+          <a class="zim-nav-link <%= currentSection === 'visitors' ? 'active' : '' %>" href="/dashboard/visitors">
+            <i class="fa-solid fa-users"></i>
+            <span>Visitors</span>
+          </a>
+          <a class="zim-nav-link" href="/dashboard">
+            <i class="fa-solid fa-gear"></i>
+            <span>Settings</span>
+          </a>
+        </nav>
+
+        <a class="zim-logout" href="/logout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Logout</span>
+        </a>
+      </aside>
+
+      <div class="offcanvas offcanvas-start zim-offcanvas" tabindex="-1" id="mobileSidebar">
+        <div class="offcanvas-header border-bottom">
+          <div class="zim-sidebar-brand mb-0">
+            <img src="/public/images/logo.png" alt="ZimParks logo" class="zim-brand-logo">
+            <div>
+              <h1>ZIMPARKS</h1>
+              <p>WILDLIFE · HERITAGE · HOSPITALITY</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+          <nav class="zim-nav">
+            <a class="zim-nav-link <%= currentSection === 'dashboard' ? 'active' : '' %>" href="/dashboard"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+            <a class="zim-nav-link <%= currentSection === 'visitors' ? 'active' : '' %>" href="/dashboard/visitors"><i class="fa-solid fa-users"></i><span>Visitors</span></a>
+            <a class="zim-nav-link <%= currentSection === 'revenue' ? 'active' : '' %>" href="/dashboard/revenue"><i class="fa-solid fa-dollar-sign"></i><span>Revenue</span></a>
+            <a class="zim-nav-link <%= currentSection === 'alerts' ? 'active' : '' %>" href="/dashboard/alerts"><i class="fa-solid fa-triangle-exclamation"></i><span>Alerts</span></a>
+            <a class="zim-nav-link" href="/logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+          </nav>
         </div>
       </div>
-      <div class="flex items-center gap-4">
-        <% if (user) { %>
-          <% const roleMap = { authority_admin: 'Authority Admin', environment_officer: 'Environment Officer', tourism_operator: 'Tourism Operator' }; %>
-          <span class="text-sm text-[var(--gray-text)]"><%= roleMap[user.role] || user.role %></span>
-          <a href="/logout" class="text-[var(--green)] font-semibold">Logout</a>
-        <% } %>
+
+      <div class="zim-main">
+        <header class="zim-topbar">
+          <div class="d-flex align-items-center gap-3">
+            <button class="btn zim-mobile-menu d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-label="Open navigation">
+              <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="zim-topbar-brand d-lg-none">
+              <img src="/public/images/logo.png" alt="ZimParks logo" class="zim-brand-logo zim-brand-logo--small">
+              <div>
+                <strong>ZIMPARKS</strong>
+                <span>HQ Dashboard</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="zim-topbar-actions">
+            <div class="zim-topbar-chip">
+              <i class="fa-regular fa-calendar"></i>
+              <span><%= topbarDateRange || '19 May 2025' %></span>
+              <i class="fa-solid fa-chevron-down"></i>
+            </div>
+            <% if (showFiltersButton) { %>
+              <button class="zim-filter-btn" type="button">
+                <i class="fa-solid fa-filter"></i>
+                <span>Filters</span>
+              </button>
+            <% } %>
+            <button class="zim-bell" type="button" aria-label="Notifications">
+              <i class="fa-regular fa-bell"></i>
+              <span class="zim-bell-count"><%= notificationCount || 3 %></span>
+            </button>
+            <div class="zim-profile">
+              <div class="zim-profile-avatar"><%= initials %></div>
+              <div class="d-none d-md-block">
+                <strong><%= roleLabel %></strong>
+                <span><%= user?.name || 'ZimParks User' %></span>
+              </div>
+              <i class="fa-solid fa-chevron-down"></i>
+            </div>
+          </div>
+        </header>
+
+        <main class="zim-content">
+          <%- body %>
+        </main>
       </div>
     </div>
-  </header>
-  <main class="max-w-6xl mx-auto px-4 py-6">
-    <%- body %>
-  </main>
+  <% } else { %>
+    <main class="container-fluid px-0">
+      <%- body %>
+    </main>
+  <% } %>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

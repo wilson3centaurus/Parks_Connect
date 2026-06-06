@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../services/app_state.dart';
 import '../services/activity_logger.dart';
 import '../widgets/app_theme.dart';
-import 'tourist_feedback_screen.dart';
 import 'field_dashboard_screen.dart';
 import 'staff_login_screen.dart';
 import 'select_park_screen.dart';
@@ -54,7 +53,8 @@ class LandingScreen extends StatelessWidget {
                         children: [
                           _LandingCard(
                             title: 'Tourist Feedback',
-                            subtitle: 'Select your park, rate the visit, add photos or report issues.',
+                            subtitle:
+                                'Select your park, rate the visit, add photos or report issues.',
                             icon: Icons.favorite_border,
                             builder: (context) => const SelectParkScreen(),
                           ),
@@ -64,9 +64,11 @@ class LandingScreen extends StatelessWidget {
                                 ? 'Login to sync park incidents, wildlife counts, and alerts.'
                                 : 'Logged in · Capture incidents, sync offline data.',
                             icon: Icons.shield_outlined,
-                            builder: (context) =>
-                                state.authToken == null ? const StaffLoginScreen() : const FieldDashboardScreen(),
-                            footer: 'Pending offline items: ${state.pendingCount}',
+                            builder: (context) => state.authToken == null
+                                ? const StaffLoginScreen()
+                                : const FieldDashboardScreen(),
+                            footer:
+                                'Pending offline items: ${state.pendingCount}',
                           ),
                         ],
                       );
@@ -114,7 +116,7 @@ class _LandingCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
-                backgroundColor: AppColors.green.withOpacity(0.1),
+                backgroundColor: AppColors.green.withValues(alpha: 0.1),
                 child: Icon(icon, color: AppColors.greenDeep),
               ),
               Column(
@@ -144,7 +146,8 @@ class _LandingCard extends StatelessWidget {
                     const Spacer(),
                     Text(
                       footer!,
-                      style: const TextStyle(fontSize: 10, color: AppColors.grayText),
+                      style: const TextStyle(
+                          fontSize: 10, color: AppColors.grayText),
                     )
                   ]
                 ],

@@ -14,7 +14,7 @@ class SyncService {
 
   Future<bool> _online() async {
     final status = await Connectivity().checkConnectivity();
-    return status != ConnectivityResult.none;
+    return !status.contains(ConnectivityResult.none);
   }
 
   Future<int> syncPending({String? token}) async {

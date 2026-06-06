@@ -25,3 +25,5 @@ public/uploads/
 **/build/
 
 .claude/
+
+.vercel

@@ -1,0 +1,187 @@
+<%
+  const summary = revenueSummaryData || {};
+  const revenueByParkRows = revenueByPark || [];
+  const revenueByCategoryRows = revenueByCategory || [];
+  const insights = revenueInsights || [];
+%>
+
+<section class="zim-page-header">
+  <h1>Revenue Summary</h1>
+  <p>Overview of revenue performance</p>
+</section>
+
+<section class="zim-grid-4 mb-4">
+  <article class="zim-card">
+    <div class="zim-kpi">
+      <div class="zim-kpi-icon"><i class="fa-solid fa-dollar-sign"></i></div>
+      <div>
+        <div class="zim-kpi-label">Total Revenue</div>
+        <div class="zim-kpi-value">USD <%= Number(summary.totalRevenue || 18430).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+        <div class="zim-kpi-trend"><i class="fa-solid fa-arrow-up up"></i> <span>24.6%</span></div>
+      </div>
+    </div>
+  </article>
+  <article class="zim-card">
+    <div class="zim-kpi">
+      <div class="zim-kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+      <div>
+        <div class="zim-kpi-label">Average Daily Revenue</div>
+        <div class="zim-kpi-value">USD <%= Number(summary.averageDailyRevenue || 969.99).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+        <div class="zim-kpi-trend"><i class="fa-solid fa-arrow-up up"></i> <span>18.3%</span></div>
+      </div>
+    </div>
+  </article>
+  <article class="zim-card">
+    <div class="zim-kpi">
+      <div class="zim-kpi-icon"><i class="fa-solid fa-chart-column"></i></div>
+      <div>
+        <div class="zim-kpi-label">Year to Date (2025)</div>
+        <div class="zim-kpi-value">USD <%= Number(summary.yearToDateRevenue || 312750.45).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+        <div class="zim-kpi-trend"><i class="fa-solid fa-arrow-up up"></i> <span>31.7%</span></div>
+      </div>
+    </div>
+  </article>
+  <article class="zim-card">
+    <div class="zim-kpi">
+      <div class="zim-kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+      <div>
+        <div class="zim-kpi-label">YoY Comparison</div>
+        <div class="zim-kpi-value">↑ 31.7%</div>
+        <div class="zim-kpi-trend"><span>vs 01 Jan - 19 May 2024</span></div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="zim-grid-2 mb-4">
+  <article class="zim-card zim-chart-frame">
+    <div class="zim-section-title">
+      <h2>Daily Revenue (USD)</h2>
+      <select class="zim-select"><option>Daily</option></select>
+    </div>
+    <canvas id="dailyRevenueChart" height="150"></canvas>
+  </article>
+  <article class="zim-card zim-chart-frame">
+    <div class="zim-section-title">
+      <h2>Revenue Trend (USD)</h2>
+      <select class="zim-select"><option>Monthly</option></select>
+    </div>
+    <canvas id="revenueTrendChart" height="150"></canvas>
+  </article>
+</section>
+
+<section class="zim-grid-3">
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <h2>Revenue by Park</h2>
+    </div>
+    <canvas id="revenueParkDoughnut" height="220"></canvas>
+  </article>
+
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <h2>Revenue by Category</h2>
+    </div>
+    <div class="zim-table-wrap">
+      <table class="table zim-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Revenue (USD)</th>
+            <th>% of Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% revenueByCategoryRows.forEach((row) => { %>
+            <tr>
+              <td><%= row.name %></td>
+              <td class="mono"><%= Number(row.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+              <td><%= Number(row.share || 0).toFixed(1) %>%</td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <h2>Revenue Insights</h2>
+    </div>
+    <div class="zim-insight-list">
+      <% insights.forEach((item) => { %>
+        <article class="zim-insight-item">
+          <div class="zim-insight-icon"><i class="fa-solid fa-arrow-up"></i></div>
+          <div>
+            <strong><%= item.title %></strong>
+            <p><%= item.description %></p>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </article>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  (() => {
+    const dailySeries = <%- JSON.stringify(revenueDailySeries || []) %>;
+    const monthlySeries = <%- JSON.stringify(revenueTrendSeries || []) %>;
+    const revenueByPark = <%- JSON.stringify(revenueByParkRows) %>;
+
+    new Chart(document.getElementById('dailyRevenueChart'), {
+      type: 'bar',
+      data: {
+        labels: dailySeries.map((row) => row.label),
+        datasets: [{
+          data: dailySeries.map((row) => row.value),
+          backgroundColor: '#0E6B2A',
+          maxBarThickness: 24
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: '#E5E7EB' } }, x: { grid: { display: false } } }
+      }
+    });
+
+    new Chart(document.getElementById('revenueTrendChart'), {
+      type: 'line',
+      data: {
+        labels: monthlySeries.map((row) => row.label),
+        datasets: [{
+          data: monthlySeries.map((row) => row.value),
+          borderColor: '#0E6B2A',
+          backgroundColor: 'rgba(29, 158, 117, 0.12)',
+          borderWidth: 2,
+          tension: 0.35,
+          pointBackgroundColor: '#0E6B2A'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: '#E5E7EB' } }, x: { grid: { display: false } } }
+      }
+    });
+
+    new Chart(document.getElementById('revenueParkDoughnut'), {
+      type: 'doughnut',
+      data: {
+        labels: revenueByPark.map((row) => row.name),
+        datasets: [{
+          data: revenueByPark.map((row) => row.value),
+          backgroundColor: ['#58B55B', '#137133', '#F3B22B', '#3E73C4', '#8256B8'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        cutout: '62%',
+        plugins: {
+          legend: { position: 'right' }
+        }
+      }
+    });
+  })();
+</script>

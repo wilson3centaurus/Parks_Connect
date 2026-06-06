@@ -3,7 +3,12 @@ import { getDb } from './db.js';
 const ROLE_MAP = {
   admin: 'authority_admin',
   staff: 'environment_officer',
-  operator: 'tourism_operator'
+  operator: 'tourism_operator',
+  sysadmin: 'authority_admin',
+  park_manager: 'authority_admin',
+  hq_analyst: 'authority_admin',
+  ranger: 'environment_officer',
+  reception: 'tourism_operator'
 };
 
 const PARK_LOCKED_ROLES = new Set(['tourism_operator', 'environment_officer']);

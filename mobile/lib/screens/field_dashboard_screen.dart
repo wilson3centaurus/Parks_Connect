@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -22,149 +23,59 @@ class FieldDashboardScreen extends StatefulWidget {
   State<FieldDashboardScreen> createState() => _FieldDashboardScreenState();
 }
 
-class _FieldDashboardScreenState extends State<FieldDashboardScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final _incidentTitle = TextEditingController();
-  final _incidentDescription = TextEditingController();
-  String _incidentSeverity = 'medium';
-
-  final _envDescription = TextEditingController();
-  String _envCategory = 'waste';
-  String _envSeverity = 'low';
+class _FieldDashboardScreenState extends State<FieldDashboardScreen> {
+  final _speciesController = TextEditingController();
+  final _countController = TextEditingController();
+  final _notesController = TextEditingController();
   final _latController = TextEditingController();
   final _lngController = TextEditingController();
+  final _picker = ImagePicker();
 
-  bool _savingIncident = false;
-  bool _savingEnv = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+
+  String _envCategory = 'wildlife';
+  int _conditionRating = 3;
+  bool _saving = false;
   bool _syncing = false;
   bool _online = true;
+  int _selectedNavIndex = 1;
+  File? _environmentPhoto;
   List<dynamic> _alerts = [];
-  File? _incidentPhoto;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    ActivityLogger.navigation('FieldDashboard');
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      ActivityLogger.navigation('FieldDashboard tab', data: {'index': _tabController.index});
+    ActivityLogger.navigation('EnvironmentalObservation');
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final state = context.read<AppState>();
+      await state.loadPendingCount();
+      await _refreshConnectivity();
+      await _loadCurrentLocation();
+      await _loadAlerts();
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppState>().loadPendingCount();
-      _refreshConnectivity();
-      _loadAlerts();
-    });
+
     _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
       final hasConnection = results.any((status) => status != ConnectivityResult.none);
+      if (!mounted) return;
       setState(() => _online = hasConnection);
     });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
-    _incidentTitle.dispose();
-    _incidentDescription.dispose();
-    _envDescription.dispose();
+    _speciesController.dispose();
+    _countController.dispose();
+    _notesController.dispose();
     _latController.dispose();
     _lngController.dispose();
     _connectivitySub?.cancel();
     super.dispose();
   }
 
-  Future<void> _saveIncident() async {
-    setState(() => _savingIncident = true);
-    final state = context.read<AppState>();
-    final api = context.read<ApiService>();
-    final parkId = state.activeParkId;
-    if (parkId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a park before logging.')));
-      setState(() => _savingIncident = false);
-      return;
-    }
-    final description = '${_incidentTitle.text} - ${_incidentDescription.text}';
-    final log = EnvironmentLog(
-      category: 'incident',
-      description: description,
-      severity: _incidentSeverity,
-      parkId: parkId,
-      photoPath: _incidentPhoto?.path,
-    );
-    ActivityLogger.action('Incident submit', data: {
-      'title': _incidentTitle.text,
-      'severity': _incidentSeverity,
-    });
-    try {
-      await api.submitEnvironmentLog(log, token: state.authToken, photo: _incidentPhoto);
-      ActivityLogger.action('Incident synced online');
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Incident synced online.')));
-      setState(() => _incidentPhoto = null);
-    } catch (_) {
-      await LocalCacheService.instance.addPending('environment', log.toJson());
-      await state.loadPendingCount();
-      ActivityLogger.action('Incident saved offline');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Incident saved offline and will sync later.')));
-    } finally {
-      setState(() => _savingIncident = false);
-      setState(() => _incidentPhoto = null);
-    }
-  }
-
-  Future<void> _saveEnvironment() async {
-    setState(() => _savingEnv = true);
-    final state = context.read<AppState>();
-    final api = context.read<ApiService>();
-    final parkId = state.activeParkId;
-    if (parkId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a park before logging.')));
-      setState(() => _savingEnv = false);
-      return;
-    }
-    final log = EnvironmentLog(
-      category: _envCategory,
-      description: _envDescription.text,
-      severity: _envSeverity,
-      lat: double.tryParse(_latController.text),
-      lng: double.tryParse(_lngController.text),
-      parkId: parkId,
-    );
-    ActivityLogger.action('Environment submit', data: {
-      'category': _envCategory,
-      'severity': _envSeverity,
-    });
-    try {
-      await api.submitEnvironmentLog(log, token: state.authToken);
-      ActivityLogger.action('Environment log synced');
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Environment log synced.')));
-    } catch (_) {
-      await LocalCacheService.instance.addPending('environment', log.toJson());
-      await state.loadPendingCount();
-      ActivityLogger.action('Environment log saved offline');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Saved offline. Will sync when online.')));
-    } finally {
-      setState(() => _savingEnv = false);
-    }
-  }
-
-  Future<void> _syncNow() async {
-    setState(() => _syncing = true);
-    final state = context.read<AppState>();
-    ActivityLogger.action('Manual sync started');
-    final synced = await context.read<SyncService>().syncPending(token: state.authToken);
-    await state.loadPendingCount();
-    await _loadAlerts();
-    setState(() => _syncing = false);
-    ActivityLogger.action('Manual sync finished', data: {'items': synced});
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Synced $synced items.')));
-  }
-
   Future<void> _refreshConnectivity() async {
     final status = await Connectivity().checkConnectivity();
-    setState(() => _online = status != ConnectivityResult.none);
+    if (!mounted) return;
+    setState(() => _online = !status.contains(ConnectivityResult.none));
   }
 
   Future<void> _loadAlerts() async {
@@ -172,394 +83,776 @@ class _FieldDashboardScreenState extends State<FieldDashboardScreen> with Single
     if (token == null || token.isEmpty) return;
     try {
       final alerts = await context.read<ApiService>().fetchNotifications(token);
+      if (!mounted) return;
       setState(() => _alerts = alerts);
     } catch (_) {
-      // ignore fetch errors for alerts
+      // Alert loading is best-effort for the mobile shell.
     }
   }
 
-  Future<void> _pickIncidentPhoto() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.camera);
-    if (picked != null) {
-      setState(() => _incidentPhoto = File(picked.path));
-      ActivityLogger.action('Incident photo attached', data: {'path': picked.path});
+  Future<void> _loadCurrentLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      if (!mounted) return;
+      setState(() {
+        _latController.text = position.latitude.toStringAsFixed(4);
+        _lngController.text = position.longitude.toStringAsFixed(4);
+      });
+    } catch (_) {
+      // Location is optional. The screen stays usable if GPS lookup fails.
     }
+  }
+
+  Future<void> _pickEnvironmentPhoto() async {
+    final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 88);
+    if (picked == null || !mounted) return;
+    setState(() => _environmentPhoto = File(picked.path));
+    ActivityLogger.action('Observation photo attached', data: {'path': picked.path});
+  }
+
+  Future<void> _clearPhoto() async {
+    setState(() => _environmentPhoto = null);
+  }
+
+  String _severityFromRating(int rating) {
+    if (rating <= 1) return 'critical';
+    if (rating == 2) return 'high';
+    if (rating == 3) return 'medium';
+    return 'low';
+  }
+
+  Future<void> _saveEnvironment() async {
+    final state = context.read<AppState>();
+    final api = context.read<ApiService>();
+    final parkId = state.activeParkId;
+
+    if (parkId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select a park before submitting an observation.')),
+      );
+      return;
+    }
+
+    if (_speciesController.text.trim().isEmpty || _countController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Species/indicator and count/reading are required.')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    final description = [
+      'Species/Indicator: ${_speciesController.text.trim()}',
+      'Count/Reading: ${_countController.text.trim()}',
+      if (_notesController.text.trim().isNotEmpty) 'Notes: ${_notesController.text.trim()}',
+      'Condition Rating: $_conditionRating/5'
+    ].join(' | ');
+
+    final log = EnvironmentLog(
+      category: _envCategory,
+      description: description,
+      severity: _severityFromRating(_conditionRating),
+      lat: double.tryParse(_latController.text),
+      lng: double.tryParse(_lngController.text),
+      parkId: parkId,
+      photoPath: _environmentPhoto?.path,
+    );
+
+    try {
+      await api.submitEnvironmentLog(log, token: state.authToken, photo: _environmentPhoto);
+      ActivityLogger.action('Environment observation synced');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Observation synced successfully.')),
+      );
+    } catch (_) {
+      await LocalCacheService.instance.addPending('environment', log.toJson());
+      await state.loadPendingCount();
+      ActivityLogger.action('Environment observation saved offline');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Observation saved offline and will sync later.')),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _speciesController.clear();
+        _countController.clear();
+        _notesController.clear();
+        _environmentPhoto = null;
+        _conditionRating = 3;
+      });
+    }
+  }
+
+  Future<void> _syncNow() async {
+    setState(() => _syncing = true);
+    final state = context.read<AppState>();
+    final synced = await context.read<SyncService>().syncPending(token: state.authToken);
+    await state.loadPendingCount();
+    await _loadAlerts();
+    if (!mounted) return;
+    setState(() => _syncing = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Synced $synced items.')),
+    );
+  }
+
+  Widget _buildTopHeader(String parkName, int pendingCount) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: const BoxDecoration(
+        color: AppColors.greenDark,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {},
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.menu, size: 30),
+                ),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ZIMPARKS',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.02,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'WILDLIFE · HERITAGE · HOSPITALITY',
+                              style: TextStyle(
+                                color: Color(0xD9FFFFFF),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_online ? Icons.cloud_queue : Icons.cloud_off_outlined, color: Colors.white, size: 22),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Offline Mode',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _online ? 'Data will sync when online' : 'Offline - will sync',
+                      style: const TextStyle(color: Color(0xD9FFFFFF), fontSize: 12),
+                    ),
+                  ],
+                )
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.park_outlined, color: Colors.white, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            parkName,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    'Queued: $pendingCount',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryTile({
+    required String id,
+    required String label,
+    required IconData icon,
+  }) {
+    final selected = _envCategory == id;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _envCategory = id),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: selected ? AppColors.green : const Color(0xFFDADDE4)),
+            color: selected ? AppColors.greenLight : Colors.white,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: selected ? AppColors.green : const Color(0xFF3F4652), size: 30),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? AppColors.greenDark : AppColors.textDark,
+                  fontWeight: FontWeight.w600,
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: AppColors.textDark, fontSize: 15, fontWeight: FontWeight.w700),
+          children: [
+            TextSpan(text: text),
+            const TextSpan(text: ' *', style: TextStyle(color: AppColors.red)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStarSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(5, (index) {
+        final rating = index + 1;
+        final selected = rating == _conditionRating;
+        return GestureDetector(
+          onTap: () => setState(() => _conditionRating = rating),
+          child: Column(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFDADDE4)),
+                  color: Colors.white,
+                ),
+                child: Icon(
+                  selected ? Icons.star : Icons.star_border,
+                  color: selected ? AppColors.green : const Color(0xFF9CA3AF),
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text('$rating')
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    final items = const [
+      (Icons.home_outlined, 'Dashboard'),
+      (Icons.eco_outlined, 'Observations'),
+      (Icons.add, 'New'),
+      (Icons.map_outlined, 'Map'),
+      (Icons.person_outline, 'Profile'),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.grayBorder)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(items.length, (index) {
+          final item = items[index];
+          final selected = _selectedNavIndex == index;
+          final isCenter = index == 2;
+
+          if (isCenter) {
+            return GestureDetector(
+              onTap: () => setState(() => _selectedNavIndex = index),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: const BoxDecoration(
+                      color: AppColors.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 34),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text('New')
+                ],
+              ),
+            );
+          }
+
+          return GestureDetector(
+            onTap: () => setState(() => _selectedNavIndex = index),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(item.$1, color: selected ? AppColors.green : const Color(0xFF3F4652), size: 30),
+                const SizedBox(height: 6),
+                Text(
+                  item.$2,
+                  style: TextStyle(
+                    color: selected ? AppColors.green : const Color(0xFF3F4652),
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final parks = state.parks;
-    final activeParkId = state.activeParkId;
     if (state.authToken == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Field Staff Dashboard')),
+        appBar: AppBar(title: const Text('Environmental Observation')),
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Sign in to access field dashboards'),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const StaffLoginScreen()),
-                  );
-                },
-                child: const Text('Go to login'),
-              )
-            ],
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const StaffLoginScreen()),
+              );
+            },
+            child: const Text('Go to login'),
           ),
         ),
       );
     }
-    if (_alerts.isEmpty && state.authToken != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadAlerts());
-    }
-    final activeParkName =
-        (parks.isNotEmpty ? parks.firstWhere((p) => p['id'] == activeParkId, orElse: () => parks.first) : const {})['name']
-                as String? ??
-            'Park';
+
+    final parks = state.parks;
+    final activeParkId = state.activeParkId;
+    final activeParkName = (parks.isNotEmpty
+            ? parks.firstWhere((p) => p['id'] == activeParkId, orElse: () => parks.first)
+            : const {})['name'] as String? ??
+        'Selected Park';
+    final locationText = _latController.text.isNotEmpty && _lngController.text.isNotEmpty
+        ? '${_latController.text}, ${_lngController.text}'
+        : 'Tap the GPS icon to detect location';
+    final notesCount = _notesController.text.trim().length;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Field Staff Dashboard'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.green,
-          labelColor: AppColors.greenDeep,
-          tabs: const [
-            Tab(text: 'Incidents'),
-            Tab(text: 'Environment'),
-            Tab(text: 'Sync'),
-          ],
-        ),
-      ),
+      backgroundColor: AppColors.grayBg,
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: const BoxDecoration(color: Colors.white, boxShadow: [
-              BoxShadow(color: AppColors.shadowColor, blurRadius: 6, offset: Offset(0, 2)),
-            ]),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          _buildTopHeader(activeParkName, state.pendingCount),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(_online ? Icons.check_circle : Icons.offline_bolt,
-                        size: 18, color: _online ? AppColors.green : Colors.red),
-                    const SizedBox(width: 6),
-                    Text(_online ? 'Online' : 'Offline', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    Text('Pending: ${state.pendingCount}', style: const TextStyle(color: AppColors.grayText, fontSize: 12)),
+                    Container(
+                      width: 74,
+                      height: 74,
+                      decoration: BoxDecoration(
+                        color: AppColors.greenLight,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Icon(Icons.eco_outlined, color: AppColors.green, size: 34),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Environmental Observation',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Record environmental conditions in the field',
+                            style: TextStyle(color: AppColors.grayText),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.greenLight,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              _online ? 'Works Offline' : 'Offline – will sync',
+                              style: const TextStyle(color: AppColors.greenDark, fontWeight: FontWeight.w700),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-                if (parks.isNotEmpty)
-                  Row(
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.grayBorder),
+                    boxShadow: const [
+                      BoxShadow(color: AppColors.shadowColor, blurRadius: 10, offset: Offset(0, 3)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Park:', style: TextStyle(fontSize: 12, color: AppColors.grayText)),
-                      const SizedBox(width: 8),
-                      DropdownButton<int>(
-                        value: activeParkId ?? parks.first['id'] as int?,
-                        items: parks
-                            .map((p) => DropdownMenuItem<int>(
-                                  value: p['id'] as int,
-                                  child: Text(p['name'] as String? ?? 'Park'),
-                                ))
-                            .toList(),
-                        onChanged: (id) => context.read<AppState>().setActivePark(id),
+                      _buildFieldLabel('Category'),
+                      Row(
+                        children: [
+                          _buildCategoryTile(id: 'wildlife', label: 'Wildlife', icon: Icons.pets),
+                          const SizedBox(width: 10),
+                          _buildCategoryTile(id: 'water', label: 'Water', icon: Icons.water_drop_outlined),
+                          const SizedBox(width: 10),
+                          _buildCategoryTile(id: 'vegetation', label: 'Vegetation', icon: Icons.park_outlined),
+                          const SizedBox(width: 10),
+                          _buildCategoryTile(id: 'waste', label: 'Waste', icon: Icons.delete_outline),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFieldLabel('Location (Auto-detected)'),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: TextEditingController(text: locationText),
+                              readOnly: true,
+                              decoration: const InputDecoration(
+                                prefixIcon: Icon(Icons.location_on_outlined),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          InkWell(
+                            onTap: _loadCurrentLocation,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFD0D5DD)),
+                              ),
+                              child: const Icon(Icons.gps_fixed, color: AppColors.green),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFieldLabel('Species / Indicator'),
+                      TextField(
+                        controller: _speciesController,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.pets_outlined),
+                          hintText: 'Enter species name or indicator',
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFieldLabel('Count / Reading'),
+                      TextField(
+                        controller: _countController,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.tag),
+                          hintText: 'Enter count or measurement',
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFieldLabel('Condition / Rating'),
+                      _buildStarSelector(),
+                      const SizedBox(height: 8),
+                      const Center(
+                        child: Text(
+                          '1 = Poor    5 = Excellent',
+                          style: TextStyle(color: AppColors.grayText, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          'Notes',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      TextField(
+                        controller: _notesController,
+                        maxLines: 4,
+                        maxLength: 300,
+                        decoration: InputDecoration(
+                          hintText: 'Enter additional notes (optional)',
+                          counterText: '$notesCount/300',
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 12),
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          'Attach Photo (Optional)',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          if (_environmentPhoto != null)
+                            Expanded(
+                              child: Container(
+                                height: 154,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: AppColors.grayBorder),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.file(_environmentPhoto!, fit: BoxFit.cover),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 6,
+                                      right: 6,
+                                      child: InkWell(
+                                        onTap: _clearPhoto,
+                                        child: Container(
+                                          width: 30,
+                                          height: 30,
+                                          decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.close, size: 18),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (_environmentPhoto != null) const SizedBox(width: 12),
+                          Expanded(
+                            child: InkWell(
+                              onTap: _pickEnvironmentPhoto,
+                              borderRadius: BorderRadius.circular(14),
+                              child: Container(
+                                height: 154,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: AppColors.green, style: BorderStyle.solid),
+                                  color: Colors.white,
+                                ),
+                                child: const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_a_photo_outlined, color: AppColors.green, size: 32),
+                                    SizedBox(height: 10),
+                                    Text(
+                                      'Tap to take photo or choose from gallery',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: AppColors.greenDark,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(height: 10),
+                                    Text(
+                                      'Photos help improve data quality',
+                                      style: TextStyle(color: AppColors.grayText),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      ElevatedButton.icon(
+                        onPressed: _saving ? null : _saveEnvironment,
+                        icon: const Icon(Icons.send_outlined),
+                        label: Text(_saving ? 'Submitting...' : 'Submit Observation'),
+                      ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Text(
+                          _online ? 'Will sync automatically when online' : 'Offline – will sync when connection is available',
+                          style: const TextStyle(color: AppColors.grayText, fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.grayBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Offline Queue & Alerts',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: _syncing ? null : _syncNow,
+                            child: Text(_syncing ? 'Syncing...' : 'Sync now'),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Pending items: ${state.pendingCount}', style: const TextStyle(color: AppColors.grayText)),
+                      const SizedBox(height: 12),
+                      if (_alerts.isEmpty)
+                        const Text('No active alerts for this park.', style: TextStyle(color: AppColors.grayText))
+                      else
+                        ..._alerts.take(3).map((alert) {
+                          final severity = ((alert as Map<String, dynamic>)['severity'] ?? 'medium').toString().toLowerCase();
+                          final color = severity == 'critical'
+                              ? AppColors.red
+                              : severity == 'high'
+                                  ? AppColors.yellow
+                                  : AppColors.green;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: color.withValues(alpha: 0.28)),
+                              color: color.withValues(alpha: 0.08),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.notifications_active_outlined, color: color),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        (alert['message'] ?? 'Alert').toString(),
+                                        style: const TextStyle(fontWeight: FontWeight.w700),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${alert['park_name'] ?? 'Park'} · ${alert['severity'] ?? 'medium'}',
+                                        style: const TextStyle(color: AppColors.grayText),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              ],
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                )
               ],
             ),
           ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _IncidentForm(
-                  titleController: _incidentTitle,
-                  descriptionController: _incidentDescription,
-                  severity: _incidentSeverity,
-                  parkName: activeParkName,
-                  photo: _incidentPhoto,
-                  onPickPhoto: _pickIncidentPhoto,
-                  onSeverityChanged: (v) {
-                    setState(() => _incidentSeverity = v);
-                    ActivityLogger.action('Incident severity changed', data: {'severity': v});
-                  },
-                  onSave: _savingIncident ? null : _saveIncident,
-                ),
-                _EnvironmentForm(
-                  descriptionController: _envDescription,
-                  category: _envCategory,
-                  severity: _envSeverity,
-                  latController: _latController,
-                  lngController: _lngController,
-                  parkName: activeParkName,
-                  onCategoryChanged: (v) {
-                    setState(() => _envCategory = v);
-                    ActivityLogger.action('Environment category changed', data: {'category': v});
-                  },
-                  onSeverityChanged: (v) {
-                    setState(() => _envSeverity = v);
-                    ActivityLogger.action('Environment severity changed', data: {'severity': v});
-                  },
-                  onSave: _savingEnv ? null : _saveEnvironment,
-                ),
-                _SyncPanel(
-                  syncing: _syncing,
-                  online: _online,
-                  pendingCount: state.pendingCount,
-                  parkName: activeParkName,
-                  alerts: _alerts,
-                  onSync: _syncNow,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _IncidentForm extends StatelessWidget {
-  final TextEditingController titleController;
-  final TextEditingController descriptionController;
-  final String severity;
-  final VoidCallback? onSave;
-  final ValueChanged<String> onSeverityChanged;
-  final String parkName;
-  final File? photo;
-  final VoidCallback onPickPhoto;
-
-  const _IncidentForm({
-    required this.titleController,
-    required this.descriptionController,
-    required this.severity,
-    required this.onSeverityChanged,
-    required this.onSave,
-    required this.parkName,
-    required this.photo,
-    required this.onPickPhoto,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        Text('Log incident · $parkName',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: titleController,
-          decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Title'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: descriptionController,
-          maxLines: 4,
-          decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Description'),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Severity'),
-          value: severity,
-          items: const [
-            DropdownMenuItem(value: 'low', child: Text('Low')),
-            DropdownMenuItem(value: 'medium', child: Text('Medium')),
-            DropdownMenuItem(value: 'high', child: Text('High')),
-            DropdownMenuItem(value: 'critical', child: Text('Critical')),
-          ],
-          onChanged: (v) => onSeverityChanged(v ?? 'medium'),
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            ElevatedButton.icon(
-              onPressed: onPickPhoto,
-              icon: const Icon(Icons.camera_alt_outlined),
-              label: const Text('Attach photo'),
-            ),
-            const SizedBox(width: 12),
-            if (photo != null) const Text('Photo attached', style: TextStyle(color: AppColors.greenDeep)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ElevatedButton(
-          onPressed: onSave,
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.green),
-          child: const Text('Save Incident'),
-        )
-      ],
-    );
-  }
-}
-
-class _EnvironmentForm extends StatelessWidget {
-  final TextEditingController descriptionController;
-  final TextEditingController latController;
-  final TextEditingController lngController;
-  final String category;
-  final String severity;
-  final VoidCallback? onSave;
-  final ValueChanged<String> onCategoryChanged;
-  final ValueChanged<String> onSeverityChanged;
-  final String parkName;
-
-  const _EnvironmentForm({
-    required this.descriptionController,
-    required this.latController,
-    required this.lngController,
-    required this.category,
-    required this.severity,
-    required this.onSave,
-    required this.onCategoryChanged,
-    required this.onSeverityChanged,
-    required this.parkName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        Text('Environment report · $parkName',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          value: category,
-          decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Category'),
-          items: const [
-            DropdownMenuItem(value: 'waste', child: Text('Waste')),
-            DropdownMenuItem(value: 'water', child: Text('Water')),
-            DropdownMenuItem(value: 'wildlife', child: Text('Wildlife')),
-            DropdownMenuItem(value: 'fire', child: Text('Fire')),
-          ],
-          onChanged: (v) => onCategoryChanged(v ?? 'waste'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: descriptionController,
-          maxLines: 3,
-          decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Description'),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          value: severity,
-          decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Severity'),
-          items: const [
-            DropdownMenuItem(value: 'low', child: Text('Low')),
-            DropdownMenuItem(value: 'medium', child: Text('Medium')),
-            DropdownMenuItem(value: 'high', child: Text('High')),
-            DropdownMenuItem(value: 'critical', child: Text('Critical')),
-          ],
-          onChanged: (v) => onSeverityChanged(v ?? 'low'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: latController,
-          decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Latitude (optional)'),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: lngController,
-          decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Longitude (optional)'),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: onSave,
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.green),
-          child: const Text('Save Environment Log'),
-        )
-      ],
-    );
-  }
-}
-
-class _SyncPanel extends StatelessWidget {
-  final bool syncing;
-  final VoidCallback onSync;
-  final bool online;
-  final int pendingCount;
-  final List<dynamic> alerts;
-  final String parkName;
-
-  const _SyncPanel({
-    required this.syncing,
-    required this.online,
-    required this.pendingCount,
-    required this.alerts,
-    required this.parkName,
-    required this.onSync,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Offline cache & alerts',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(online ? Icons.cloud_done : Icons.cloud_off, color: online ? AppColors.green : Colors.red),
-              const SizedBox(width: 8),
-              Text(online ? 'Online for sync' : 'Offline · queued', style: const TextStyle(fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text('Pending items: $pendingCount', style: const TextStyle(color: AppColors.grayText)),
-          Text('Park: $parkName', style: const TextStyle(color: AppColors.grayText)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              ElevatedButton(
-                onPressed: syncing ? null : onSync,
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.green),
-                child: Text(syncing ? 'Syncing...' : 'Sync now'),
-              ),
-              const SizedBox(width: 12),
-              OutlinedButton(
-                onPressed: () async {
-                  ActivityLogger.action('Clear offline cache');
-                  await LocalCacheService.instance.clearPending();
-                  await context.read<AppState>().loadPendingCount();
-                },
-                child: const Text('Clear cache'),
-              )
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text('Critical alerts', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          if (alerts.isEmpty)
-            const Text('No open alerts for this park.', style: TextStyle(color: AppColors.grayText))
-          else
-            Container(
-              constraints: const BoxConstraints(maxHeight: 160),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: alerts.length,
-                itemBuilder: (context, index) {
-                  final alert = alerts[index] as Map<String, dynamic>;
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: Text(alert['message'] as String? ?? '', style: const TextStyle(fontSize: 14)),
-                    subtitle: Text(alert['severity'] as String? ?? '', style: const TextStyle(fontSize: 12)),
-                  );
-                },
-              ),
-            )
+          _buildBottomNav(),
         ],
       ),
     );

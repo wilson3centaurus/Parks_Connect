@@ -1,93 +1,317 @@
-<% const activeMode = mode === 'register' ? 'register' : 'login'; %>
-<div class="max-w-2xl mx-auto bg-white shadow-card border border-[var(--gray-border)] rounded-2xl p-8">
-  <h1 class="text-2xl font-bold text-[var(--green-deep)] mb-2">Access Parks Connect</h1>
-  <p class="text-[var(--gray-text)] mb-4">Sign in to the correct Parks Connect portal or create a role-scoped account with the IT admin key.</p>
-
-  <div class="flex gap-3 mb-6">
-    <button type="button" data-toggle="login" class="flex-1 py-3 rounded-lg font-semibold border border-[var(--gray-border)] transition <%= activeMode === 'login' ? 'bg-[var(--green-light)] text-[var(--green-deep)] border-[var(--green)]' : 'text-[var(--gray-text)] hover:border-[var(--green)]' %>">Sign in</button>
-    <button type="button" data-toggle="register" class="flex-1 py-3 rounded-lg font-semibold border border-[var(--gray-border)] transition <%= activeMode === 'register' ? 'bg-[var(--green-light)] text-[var(--green-deep)] border-[var(--green)]' : 'text-[var(--gray-text)] hover:border-[var(--green)]' %>">Create account</button>
-  </div>
-
-  <% if (error) { %>
-    <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4"><%= error %></div>
-  <% } %>
-
-  <div id="loginForm" class="<%= activeMode === 'login' ? '' : 'hidden' %>">
-    <form action="/login" method="POST" class="space-y-4">
-      <div>
-        <label class="block text-sm mb-1">Email</label>
-        <input name="email" type="email" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
-      </div>
-      <div>
-        <label class="block text-sm mb-1">Password</label>
-        <input name="password" type="password" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
-      </div>
-      <button type="submit" class="w-full bg-[var(--green)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--green-dark)] transition">Sign in</button>
-    </form>
-  </div>
-
-  <div id="registerForm" class="<%= activeMode === 'register' ? '' : 'hidden' %>">
-    <form action="/register" method="POST" class="space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm mb-1">Full name</label>
-          <input name="name" type="text" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
+<% const activeMode = mode === 'register' || mode === 'forgot' ? mode : 'login'; %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parks Connect | Access</title>
+  <link rel="stylesheet" href="/public/css/auth.css">
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="auth-stage auth-stage--split">
+      <aside class="auth-hero auth-hero--editorial">
+        <div class="hero-topbar">
+          <div class="auth-brand">
+            <div class="brand-mark"><img src="/public/images/logo.png" alt="ZimParks logo"></div>
+            <div>
+              <h1>ZimParks</h1>
+              <p>Central conservation operations platform</p>
+            </div>
+          </div>
+          <a href="/login<%= activeMode === 'register' ? '' : '?mode=register' %>" class="ghost-link">
+            <%= activeMode === 'register' ? 'Staff sign-in' : 'Create account' %>
+          </a>
         </div>
-        <div>
-          <label class="block text-sm mb-1">Role</label>
-          <select name="role" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
-            <option value="authority_admin">Authority Admin</option>
-            <option value="environment_officer">Environment Officer</option>
-            <option value="tourism_operator">Tourism Operator</option>
-          </select>
+
+        <div class="hero-panel hero-panel--editorial">
+          <span class="hero-eyebrow">Mission control</span>
+          <h2>Coordinate parks.<br>Track field data.<br>Respond faster.</h2>
+          <p>Parks Connect brings together conservation reporting, visitor services, environmental monitoring, and operational response through one connected interface.</p>
         </div>
-      </div>
-      <div>
-        <label class="block text-sm mb-1">Park ID (required for officer/operator)</label>
-        <input name="park_id" type="number" min="1" class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]" placeholder="e.g. 1">
-      </div>
-      <div>
-        <label class="block text-sm mb-1">Email</label>
-        <input name="email" type="email" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
-      </div>
-      <div>
-        <label class="block text-sm mb-1">Password</label>
-        <input name="password" type="password" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]">
-      </div>
-      <div>
-        <label class="block text-sm mb-1">IT admin key</label>
-        <input name="it_admin_key" type="password" required class="w-full border border-[var(--gray-border)] rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--green)]" placeholder="Provided by IT">
-        <p class="text-xs text-[var(--gray-text)] mt-1">Creating an account requires the IT admin key.</p>
-      </div>
-      <button type="submit" class="w-full bg-[var(--green)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--green-dark)] transition">Create account</button>
-    </form>
-  </div>
-</div>
 
-<script>
-  (function () {
-    const buttons = document.querySelectorAll('[data-toggle]');
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
+        <div class="hero-actions">
+          <a href="/login?mode=register" class="hero-action hero-action--light">Create account</a>
+          <a href="/login" class="hero-action hero-action--outline">Staff sign-in</a>
+        </div>
 
-    function setMode(mode) {
-      const isLogin = mode === 'login';
-      loginForm.classList.toggle('hidden', !isLogin);
-      registerForm.classList.toggle('hidden', isLogin);
-      buttons.forEach((btn) => {
-        const active = btn.dataset.toggle === mode;
-        btn.classList.toggle('bg-[var(--green-light)]', active);
-        btn.classList.toggle('text-[var(--green-deep)]', active);
-        btn.classList.toggle('border-[var(--green)]', active);
-        btn.classList.toggle('text-[var(--gray-text)]', !active);
+        <div class="hero-metric-grid">
+          <div class="hero-metric">
+            <span>Modules</span>
+            <strong>8</strong>
+            <p>Dashboards for analytics, alerts, tourism, parks, environment, and reporting.</p>
+          </div>
+          <div class="hero-metric">
+            <span>Roles</span>
+            <strong>3</strong>
+            <p>Authority, environment, and tourism portals with role-scoped access.</p>
+          </div>
+          <div class="hero-metric">
+            <span>Security</span>
+            <strong>Protected</strong>
+            <p>Backend-authenticated sessions with controlled account creation through the admin key.</p>
+          </div>
+        </div>
+
+        <div class="hero-visual-card">
+          <div class="visual-label-row">
+            <span class="visual-label">ZimParks overview</span>
+            <span class="visual-status">Editorial login experience</span>
+          </div>
+          <div class="visual-window">
+            <img src="/public/images/login-hero.png" alt="ZimParks parks operations" class="visual-hero-image">
+            <div class="visual-orbit visual-orbit--one"></div>
+            <div class="visual-orbit visual-orbit--two"></div>
+            <div class="visual-grid"></div>
+            <div class="visual-screen">
+              <div class="visual-screen-label">National park operations</div>
+              <div class="visual-screen-title">Protecting wildlife, tourism, and infrastructure across Zimbabwe.</div>
+              <div class="visual-screen-copy">This deployment keeps the current web and API architecture, while restoring the image-led login experience you wanted.</div>
+            </div>
+            <div class="visual-badge">LIVE UI</div>
+          </div>
+          <div class="visual-pill-row">
+            <span class="hero-chip">Login hero</span>
+            <span class="hero-chip">Logo branding</span>
+            <span class="hero-chip">Operational layout</span>
+            <span class="hero-chip">Vercel hosted</span>
+          </div>
+        </div>
+      </aside>
+
+      <section class="auth-card auth-card--login">
+        <div class="login-card-top">
+          <div class="login-brand-panel">
+            <div class="login-brand-grid"></div>
+            <div class="login-brand-image-wrap">
+              <img src="/public/images/login-hero.png" alt="ZimParks parks operations" class="login-brand-image">
+            </div>
+            <div class="login-brand-copy">
+              <span class="auth-kicker">ZimParks</span>
+              <h2>Managing protected areas through one central platform.</h2>
+              <p>Use the same production backend, but with the richer branded interface and the original hero and logo assets restored.</p>
+            </div>
+            <div class="login-brand-badge">ZimParks</div>
+          </div>
+        </div>
+
+        <div class="login-form-shell">
+          <div class="auth-card-header">
+            <div>
+              <span class="auth-kicker"><%= activeMode === 'register' ? 'Account Setup' : activeMode === 'forgot' ? 'Password Recovery' : 'Staff Sign-In' %></span>
+              <h2><%= activeMode === 'register' ? 'Create account' : activeMode === 'forgot' ? 'Forgot password' : 'Login' %></h2>
+              <p>
+                <%= activeMode === 'register'
+                  ? 'Create a role-scoped account for the web portal. Officers and operators should provide their assigned park ID.'
+                  : activeMode === 'forgot'
+                    ? 'Reset a staff account password using the assigned IT admin key and a new strong password.'
+                    : 'Use your assigned email and password to access the role dashboard and operational workspace.' %>
+              </p>
+            </div>
+            <div class="card-badge">Secure Session</div>
+          </div>
+
+          <div class="auth-links">
+            <a href="/login" data-toggle="login" class="<%= activeMode === 'login' ? 'btn btn-primary' : 'btn btn-secondary' %>">Sign in</a>
+            <a href="/login?mode=register" data-toggle="register" class="<%= activeMode === 'register' ? 'btn btn-primary' : 'btn btn-secondary' %>">Create account</a>
+            <a href="/login?mode=forgot" data-toggle="forgot" class="<%= activeMode === 'forgot' ? 'btn btn-primary' : 'btn btn-secondary' %>">Forgot password</a>
+          </div>
+
+          <% if (error) { %>
+            <div class="notice error"><%= error %></div>
+          <% } %>
+          <% if (success) { %>
+            <div class="notice success"><%= success %></div>
+          <% } %>
+
+          <div id="loginForm" class="<%= activeMode === 'login' ? '' : 'hidden' %>">
+            <form action="/login" method="POST" class="auth-form">
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="login-email">Email</label>
+                  <input id="login-email" name="email" type="email" placeholder="name@parksconnect.local" autocomplete="username" required>
+                </div>
+                <div class="field-group">
+                  <label for="login-password">Password</label>
+                  <div class="password-field">
+                    <input id="login-password" name="password" type="password" placeholder="Enter your password" minlength="8" maxlength="128" autocomplete="current-password" required>
+                    <button type="button" class="password-toggle" data-password-toggle="login-password" aria-label="Show password">Show</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="auth-form-actions">
+                <button type="submit" class="btn btn-primary full-width">Login</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="registerForm" class="<%= activeMode === 'register' ? '' : 'hidden' %>">
+            <form action="/register" method="POST" class="auth-form">
+              <div class="field-grid two-col">
+                <div class="field-group">
+                  <label for="register-name">Full name</label>
+                  <input id="register-name" name="name" type="text" placeholder="Full name" minlength="2" maxlength="80" required>
+                </div>
+                <div class="field-group">
+                  <label for="register-role">Role</label>
+                  <select id="register-role" name="role" required>
+                    <option value="authority_admin">Authority Admin</option>
+                    <option value="environment_officer">Environment Officer</option>
+                    <option value="tourism_operator">Tourism Operator</option>
+                  </select>
+                </div>
+                <div class="field-group full-width">
+                  <label for="register-park-id">Park ID</label>
+                  <input id="register-park-id" name="park_id" type="number" min="1" placeholder="Required for officer/operator accounts">
+                  <div class="field-note">Use the assigned park ID when creating environment officer or tourism operator access.</div>
+                </div>
+                <div class="field-group">
+                  <label for="register-email">Email</label>
+                  <input id="register-email" name="email" type="email" placeholder="name@parksconnect.local" autocomplete="username" required>
+                </div>
+                <div class="field-group">
+                  <label for="register-password">Password</label>
+                  <div class="password-field">
+                    <input id="register-password" name="password" type="password" placeholder="Choose a password" minlength="8" maxlength="128" autocomplete="new-password" required>
+                    <button type="button" class="password-toggle" data-password-toggle="register-password" aria-label="Show password">Show</button>
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label for="register-confirm-password">Confirm password</label>
+                  <div class="password-field">
+                    <input id="register-confirm-password" name="confirm_password" type="password" placeholder="Re-enter password" minlength="8" maxlength="128" autocomplete="new-password" required>
+                    <button type="button" class="password-toggle" data-password-toggle="register-confirm-password" aria-label="Show password">Show</button>
+                  </div>
+                </div>
+                <div class="field-group full-width">
+                  <label for="register-admin-key">IT admin key</label>
+                  <input id="register-admin-key" name="it_admin_key" type="password" placeholder="Provided by IT" required>
+                  <div class="field-note">Account creation is restricted by the backend IT admin key.</div>
+                </div>
+              </div>
+
+              <div class="auth-form-actions">
+                <button type="submit" class="btn btn-primary full-width">Create account</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="forgotForm" class="<%= activeMode === 'forgot' ? '' : 'hidden' %>">
+            <form action="/forgot-password" method="POST" class="auth-form">
+              <div class="field-grid two-col">
+                <div class="field-group full-width">
+                  <label for="forgot-email">Account email</label>
+                  <input id="forgot-email" name="email" type="email" placeholder="name@parksconnect.local" autocomplete="username" required>
+                </div>
+                <div class="field-group">
+                  <label for="forgot-new-password">New password</label>
+                  <div class="password-field">
+                    <input id="forgot-new-password" name="new_password" type="password" placeholder="At least 8 chars, letters + numbers" minlength="8" maxlength="128" autocomplete="new-password" required>
+                    <button type="button" class="password-toggle" data-password-toggle="forgot-new-password" aria-label="Show password">Show</button>
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label for="forgot-confirm-password">Confirm password</label>
+                  <div class="password-field">
+                    <input id="forgot-confirm-password" name="confirm_password" type="password" placeholder="Re-enter new password" minlength="8" maxlength="128" autocomplete="new-password" required>
+                    <button type="button" class="password-toggle" data-password-toggle="forgot-confirm-password" aria-label="Show password">Show</button>
+                  </div>
+                </div>
+                <div class="field-group full-width">
+                  <label for="forgot-admin-key">IT admin key</label>
+                  <input id="forgot-admin-key" name="it_admin_key" type="password" placeholder="Provided by IT" required>
+                </div>
+              </div>
+
+              <div class="auth-form-actions">
+                <button type="submit" class="btn btn-primary full-width">Update password</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const buttons = document.querySelectorAll('[data-toggle]');
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+      const forgotForm = document.getElementById('forgotForm');
+      const registerPassword = document.getElementById('register-password');
+      const registerConfirmPassword = document.getElementById('register-confirm-password');
+      const forgotNewPassword = document.getElementById('forgot-new-password');
+      const forgotConfirmPassword = document.getElementById('forgot-confirm-password');
+      const registerRole = document.getElementById('register-role');
+      const registerParkId = document.getElementById('register-park-id');
+      const passwordToggles = document.querySelectorAll('[data-password-toggle]');
+
+      function validatePasswordMatch(passwordInput, confirmInput) {
+        if (!passwordInput || !confirmInput) return;
+        if (!confirmInput.value) {
+          confirmInput.setCustomValidity('');
+          return;
+        }
+        confirmInput.setCustomValidity(
+          passwordInput.value === confirmInput.value ? '' : 'Passwords do not match.'
+        );
+      }
+
+      function validateParkIdRequirement() {
+        if (!registerRole || !registerParkId) return;
+        const requiresParkId = registerRole.value === 'environment_officer' || registerRole.value === 'tourism_operator';
+        registerParkId.required = requiresParkId;
+        if (requiresParkId && (!registerParkId.value || Number(registerParkId.value) < 1)) {
+          registerParkId.setCustomValidity('Park ID is required for officer/operator accounts.');
+        } else {
+          registerParkId.setCustomValidity('');
+        }
+      }
+
+      function setMode(mode) {
+        const isLogin = mode === 'login';
+        const isRegister = mode === 'register';
+        const isForgot = mode === 'forgot';
+        loginForm.classList.toggle('hidden', !isLogin);
+        registerForm.classList.toggle('hidden', !isRegister);
+        forgotForm.classList.toggle('hidden', !isForgot);
+        buttons.forEach((button) => {
+          const active = button.dataset.toggle === mode;
+          button.classList.toggle('btn-primary', active);
+          button.classList.toggle('btn-secondary', !active);
+        });
+        const search = isLogin ? '?mode=login' : isRegister ? '?mode=register' : '?mode=forgot';
+        window.history.replaceState({}, '', `${window.location.pathname}${search}`);
+      }
+
+      validateParkIdRequirement();
+      registerRole?.addEventListener('change', validateParkIdRequirement);
+      registerParkId?.addEventListener('input', validateParkIdRequirement);
+      registerPassword?.addEventListener('input', () => validatePasswordMatch(registerPassword, registerConfirmPassword));
+      registerConfirmPassword?.addEventListener('input', () => validatePasswordMatch(registerPassword, registerConfirmPassword));
+      forgotNewPassword?.addEventListener('input', () => validatePasswordMatch(forgotNewPassword, forgotConfirmPassword));
+      forgotConfirmPassword?.addEventListener('input', () => validatePasswordMatch(forgotNewPassword, forgotConfirmPassword));
+
+      buttons.forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          setMode(button.dataset.toggle);
+        });
       });
-      const search = mode === 'register' ? '?mode=register' : '?mode=login';
-      const newUrl = `${window.location.pathname}${search}`;
-      window.history.replaceState({}, '', newUrl);
-    }
 
-    buttons.forEach((btn) => {
-      btn.addEventListener('click', () => setMode(btn.dataset.toggle));
-    });
-  })();
-</script>
+      passwordToggles.forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+          const input = document.getElementById(toggle.dataset.passwordToggle);
+          if (!input) return;
+          const shouldShow = input.type === 'password';
+          input.type = shouldShow ? 'text' : 'password';
+          toggle.textContent = shouldShow ? 'Hide' : 'Show';
+          toggle.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

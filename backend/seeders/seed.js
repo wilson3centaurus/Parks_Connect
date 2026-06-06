@@ -38,9 +38,45 @@ async function ensureAssignment(db, userId, parkId, role) {
   return inserted.lastID;
 }
 
+async function insertFeedbackRecord(db, {
+  parkId,
+  submittedBy,
+  feedbackType,
+  rating,
+  comments,
+  deviceId,
+  status,
+  category,
+  channel,
+  visitDate
+}) {
+  const normalizedTouristFeedbackType = feedbackType === 'operator' ? 'tourism_operator' : feedbackType;
+  const existing = await db.get(
+    `SELECT id FROM tourist_feedback
+     WHERE park_id = ? AND submitted_by = ? AND comments = ? AND visit_date = ?`,
+    [parkId, submittedBy, comments, visitDate]
+  );
+
+  if (existing) return existing.id;
+
+  const legacyInsert = await db.run(
+    `INSERT INTO feedback (park_id, submitted_by, type, category, rating, comments, channel, visit_date, device_id, status, submitted_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+    [parkId, submittedBy, feedbackType, category, rating, comments, channel, visitDate, deviceId, status]
+  );
+
+  const inserted = await db.run(
+    `INSERT INTO tourist_feedback (legacy_feedback_id, park_id, submitted_by, type, category, rating, comments, channel, visit_date, device_id, status, submitted_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+    [legacyInsert.lastID, parkId, submittedBy, normalizedTouristFeedbackType, category, rating, comments, channel, visitDate, deviceId, status]
+  );
+
+  return inserted.lastID;
+}
+
 async function ensureSampleData(db, parksByCode, users) {
   const visitorCount = await db.get(`SELECT COUNT(*) AS total FROM visitor_logs`);
-  if ((visitorCount?.total || 0) < 4) {
+  if ((visitorCount?.total || 0) < 18) {
     const sampleVisitorLogs = [
       {
         park: 'HNP',
@@ -85,12 +121,83 @@ async function ensureSampleData(db, parksByCode, users) {
         unitsAvailable: 92,
         unitsOccupied: 84,
         notes: 'High occupancy during festival period.'
+      },
+      {
+        park: 'HNP',
+        operatorId: users.operatorNorth,
+        date: '2026-02-08',
+        local: 245,
+        international: 110,
+        occupancy: 0.76,
+        unitsAvailable: 80,
+        unitsOccupied: 61,
+        notes: 'School holiday traffic increased guided safari demand.'
+      },
+      {
+        park: 'HNP',
+        operatorId: users.operatorNorth,
+        date: '2026-02-16',
+        local: 210,
+        international: 120,
+        occupancy: 0.71,
+        unitsAvailable: 80,
+        unitsOccupied: 57,
+        notes: 'Stable occupancy and strong photography-tour bookings.'
+      },
+      {
+        park: 'MP',
+        operatorId: users.operatorWest,
+        date: '2026-02-07',
+        local: 190,
+        international: 86,
+        occupancy: 0.64,
+        unitsAvailable: 64,
+        unitsOccupied: 41,
+        notes: 'River activity tours performed well after weather cleared.'
+      },
+      {
+        park: 'MP',
+        operatorId: users.operatorWest,
+        date: '2026-02-14',
+        local: 205,
+        international: 95,
+        occupancy: 0.69,
+        unitsAvailable: 64,
+        unitsOccupied: 44,
+        notes: 'Weekend family segment grew, campsites near full.'
+      },
+      {
+        park: 'VF',
+        operatorId: users.operatorWest,
+        date: '2026-02-10',
+        local: 295,
+        international: 210,
+        occupancy: 0.93,
+        unitsAvailable: 92,
+        unitsOccupied: 86,
+        notes: 'Conference visitors pushed demand above forecast.'
+      },
+      {
+        park: 'VF',
+        operatorId: users.operatorWest,
+        date: '2026-02-18',
+        local: 265,
+        international: 188,
+        occupancy: 0.87,
+        unitsAvailable: 92,
+        unitsOccupied: 80,
+        notes: 'Strong midweek demand and excellent tour conversion.'
       }
     ];
 
     for (const item of sampleVisitorLogs) {
       const parkId = parksByCode[item.park];
       if (!parkId) continue;
+      const existing = await db.get(
+        `SELECT id FROM visitor_logs WHERE park_id = ? AND operator_id = ? AND log_date = ?`,
+        [parkId, item.operatorId, item.date]
+      );
+      if (existing) continue;
       await db.run(
         `INSERT INTO visitor_logs (
           park_id,
@@ -129,79 +236,95 @@ async function ensureSampleData(db, parksByCode, users) {
   }
 
   const envCount = await db.get(`SELECT COUNT(*) AS total FROM environmental_logs`);
-  if ((envCount?.total || 0) < 4) {
-    await db.run(
-      `INSERT INTO environmental_logs (park_id, staff_id, category, description, incident_type, event_type, severity, status, location_lat, location_lng)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [parksByCode.HNP, users.officerNorth, 'water', 'Primary borehole flow interrupted.', 'dry', null, 'high', 'new', -18.629, 26.243]
-    );
-    await db.run(
-      `INSERT INTO environmental_logs (park_id, staff_id, category, description, incident_type, event_type, severity, status, location_lat, location_lng)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [parksByCode.HNP, users.officerNorth, 'waste', 'Overflowing bins near main picnic area.', 'overflow', null, 'high', 'assigned', -18.634, 26.251]
-    );
-    await db.run(
-      `INSERT INTO environmental_logs (park_id, staff_id, category, description, incident_type, event_type, severity, status, location_lat, location_lng)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [parksByCode.MP, users.officerWest, 'wildlife', 'Buffalo carcass discovered by patrol.', null, 'mortality', 'critical', 'in_progress', -16.820, 29.310]
-    );
-    await db.run(
-      `INSERT INTO environmental_logs (park_id, staff_id, category, description, incident_type, event_type, severity, status, location_lat, location_lng)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [parksByCode.VF, users.officerWest, 'incident', 'Unauthorized campsite fire reported.', 'fire', null, 'high', 'new', -17.925, 25.846]
-    );
-  }
-
-  const feedbackCount = await db.get(`SELECT COUNT(*) AS total FROM tourist_feedback`);
-  if ((feedbackCount?.total || 0) < 6) {
-    const feedbackSamples = [
-      [parksByCode.HNP, 'Visitor Mary', 'tourist', 5, 'Excellent wildlife viewing and clean facilities.', 'device_demo_1', 'resolved'],
-      [parksByCode.HNP, 'Visitor Joel', 'tourist', 2, 'Water points were dry near campsite B.', 'device_demo_1', 'new'],
-      [parksByCode.MP, 'Visitor Tariro', 'tourist', 3, 'Guided walks were great but signage needs updates.', 'device_demo_2', 'assigned'],
-      [parksByCode.VF, 'Operator West Team', 'operator', 2, 'Waste handling backlog affecting guest areas.', 'web_operator', 'in_progress'],
-      [parksByCode.VF, 'Visitor Rudo', 'tourist', 1, 'Illegal dump near parking area.', 'device_demo_3', 'new'],
-      [parksByCode.MP, 'Operator North Team', 'operator', 4, 'Occupancy stable and check-in smooth.', 'web_operator', 'resolved']
+  if ((envCount?.total || 0) < 12) {
+    const envSamples = [
+      [parksByCode.HNP, users.officerNorth, 'water', 'Primary borehole flow interrupted.', 'dry', null, 'high', 'new', -18.629, 26.243],
+      [parksByCode.HNP, users.officerNorth, 'waste', 'Overflowing bins near main picnic area.', 'overflow', null, 'high', 'assigned', -18.634, 26.251],
+      [parksByCode.MP, users.officerWest, 'wildlife', 'Buffalo carcass discovered by patrol.', null, 'mortality', 'critical', 'in_progress', -16.820, 29.310],
+      [parksByCode.VF, users.officerWest, 'incident', 'Unauthorized campsite fire reported.', 'fire', null, 'high', 'new', -17.925, 25.846],
+      [parksByCode.HNP, users.officerNorth, 'wildlife', 'Elephant herd migrated toward the eastern corridor.', null, 'movement', 'medium', 'resolved', -18.604, 26.281],
+      [parksByCode.MP, users.officerWest, 'water', 'River pump pressure reduced by sediment buildup.', 'low_pressure', null, 'medium', 'assigned', -16.814, 29.325],
+      [parksByCode.VF, users.officerWest, 'waste', 'Recycling station backlog after weekend surge.', 'overflow', null, 'medium', 'new', -17.911, 25.828],
+      [parksByCode.VF, users.officerWest, 'incident', 'Fence breach reported near service road.', 'security_breach', null, 'critical', 'in_progress', -17.938, 25.861]
     ];
 
-    for (const sample of feedbackSamples) {
-      const [parkId, submittedBy, feedbackType, rating, comments, deviceId, status] = sample;
-      const normalizedTouristFeedbackType = feedbackType === 'operator' ? 'tourism_operator' : feedbackType;
-      const legacyInsert = await db.run(
-        `INSERT INTO feedback (park_id, submitted_by, type, rating, comments, device_id, status, submitted_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [parkId, submittedBy, feedbackType, rating, comments, deviceId, status]
+    for (const item of envSamples) {
+      const existing = await db.get(
+        `SELECT id FROM environmental_logs WHERE park_id = ? AND description = ?`,
+        [item[0], item[3]]
       );
-
+      if (existing) continue;
       await db.run(
-        `INSERT INTO tourist_feedback (legacy_feedback_id, park_id, submitted_by, type, rating, comments, device_id, status, submitted_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [legacyInsert.lastID, parkId, submittedBy, normalizedTouristFeedbackType, rating, comments, deviceId, status]
+        `INSERT INTO environmental_logs (park_id, staff_id, category, description, incident_type, event_type, severity, status, location_lat, location_lng)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        item
       );
     }
   }
 
+  const feedbackCount = await db.get(`SELECT COUNT(*) AS total FROM tourist_feedback`);
+  if ((feedbackCount?.total || 0) < 24) {
+    const feedbackSamples = [
+      [parksByCode.HNP, 'Visitor Mary', 'tourist', 5, 'Excellent wildlife viewing and clean facilities.', 'device_demo_1', 'resolved', 'wildlife', 'mobile', '2026-02-01'],
+      [parksByCode.HNP, 'Visitor Joel', 'tourist', 2, 'Water points were dry near campsite B.', 'device_demo_1', 'new', 'facilities', 'mobile', '2026-02-02'],
+      [parksByCode.MP, 'Visitor Tariro', 'tourist', 3, 'Guided walks were great but signage needs updates.', 'device_demo_2', 'assigned', 'staff', 'mobile', '2026-02-03'],
+      [parksByCode.VF, 'Operator West Team', 'operator', 2, 'Waste handling backlog affecting guest areas.', 'web_operator', 'in_progress', 'facilities', 'web', '2026-02-04'],
+      [parksByCode.VF, 'Visitor Rudo', 'tourist', 1, 'Danger near parking area after dark.', 'device_demo_3', 'new', 'safety', 'mobile', '2026-02-05'],
+      [parksByCode.MP, 'Operator North Team', 'operator', 4, 'Occupancy stable and check-in smooth.', 'web_operator', 'resolved', 'general', 'web', '2026-02-06'],
+      [parksByCode.HNP, 'Visitor Nomsa', 'tourist', 2, 'No water at the shared ablution block and dusty footpaths.', 'device_demo_5', 'new', 'facilities', 'mobile', '2026-02-07'],
+      [parksByCode.HNP, 'Visitor Kelvin', 'tourist', 2, 'Dry taps again near camp, wildlife was great though.', 'device_demo_6', 'assigned', 'facilities', 'web', '2026-02-08'],
+      [parksByCode.HNP, 'Visitor Laura', 'tourist', 3, 'Staff were helpful but the borehole area felt neglected.', 'device_demo_7', 'new', 'staff', 'email', '2026-02-09'],
+      [parksByCode.MP, 'Visitor Patrick', 'tourist', 5, 'Outstanding canoe safari and very knowledgeable guides.', 'device_demo_8', 'resolved', 'wildlife', 'web', '2026-02-10'],
+      [parksByCode.MP, 'Visitor Chipo', 'tourist', 4, 'Campsite was clean and ranger briefing was clear.', 'device_demo_9', 'resolved', 'staff', 'email', '2026-02-11'],
+      [parksByCode.MP, 'Visitor Brian', 'tourist', 2, 'Facilities need urgent repair and shower pressure was poor.', 'device_demo_10', 'new', 'facilities', 'mobile', '2026-02-12'],
+      [parksByCode.VF, 'Visitor Alice', 'tourist', 1, 'Robbery scare near the parking lane made us feel unsafe.', 'device_demo_11', 'new', 'safety', 'email', '2026-02-13'],
+      [parksByCode.VF, 'Visitor Tawanda', 'tourist', 4, 'Spectacular views and smooth booking process.', 'device_demo_12', 'resolved', 'general', 'web', '2026-02-14'],
+      [parksByCode.VF, 'Operator Falls Lodge', 'operator', 2, 'Facilities backlog continues around waste collection points.', 'web_operator_2', 'in_progress', 'facilities', 'web', '2026-02-15'],
+      [parksByCode.VF, 'Visitor Miriam', 'tourist', 3, 'Great wildlife but some areas felt crowded.', 'device_demo_13', 'assigned', 'wildlife', 'mobile', '2026-02-16'],
+      [parksByCode.HNP, 'Visitor Jabu', 'tourist', 5, 'Best game drive of our trip, lions spotted before sunrise.', 'device_demo_14', 'resolved', 'wildlife', 'email', '2026-02-17'],
+      [parksByCode.MP, 'Visitor Ruth', 'tourist', 4, 'Very friendly staff and strong conservation messaging.', 'device_demo_15', 'resolved', 'staff', 'web', '2026-02-18']
+    ];
+
+    for (const sample of feedbackSamples) {
+      const [parkId, submittedBy, feedbackType, rating, comments, deviceId, status, category, channel, visitDate] = sample;
+      await insertFeedbackRecord(db, {
+        parkId,
+        submittedBy,
+        feedbackType,
+        rating,
+        comments,
+        deviceId,
+        status,
+        category,
+        channel,
+        visitDate
+      });
+    }
+  }
+
   const incidentCount = await db.get(`SELECT COUNT(*) AS total FROM incidents`);
-  if ((incidentCount?.total || 0) < 4) {
-    await db.run(
-      `INSERT INTO incidents (park_id, incident_type, description, severity, status, gps_lat, gps_lng, device_id, reported_by, reported_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [parksByCode.HNP, 'water_supply', 'Dry water trench near sector A.', 'high', 'new', -18.621, 26.247, 'device_demo_1', users.officerNorth]
-    );
-    await db.run(
-      `INSERT INTO incidents (park_id, incident_type, description, severity, status, gps_lat, gps_lng, device_id, reported_by, reported_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [parksByCode.MP, 'wildlife_conflict', 'Human-wildlife conflict at buffer zone.', 'critical', 'assigned', -16.826, 29.302, 'device_demo_2', users.officerWest]
-    );
-    await db.run(
-      `INSERT INTO incidents (park_id, incident_type, description, severity, status, gps_lat, gps_lng, device_id, reported_by, reported_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [parksByCode.VF, 'illegal_dump', 'Illegal dumping reported by tourist.', 'high', 'in_progress', -17.932, 25.842, 'device_demo_3', users.officerWest]
-    );
-    await db.run(
-      `INSERT INTO incidents (park_id, incident_type, description, severity, status, gps_lat, gps_lng, device_id, reported_by, reported_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [parksByCode.HNP, 'poaching', 'Snare traps discovered at patrol point 7.', 'medium', 'resolved', -18.639, 26.255, 'device_demo_4', users.officerNorth]
-    );
+  if ((incidentCount?.total || 0) < 10) {
+    const incidentSamples = [
+      [parksByCode.HNP, 'water_supply', 'Dry water trench near sector A.', 'high', 'new', -18.621, 26.247, 'device_demo_1', users.officerNorth],
+      [parksByCode.MP, 'wildlife_conflict', 'Human-wildlife conflict at buffer zone.', 'critical', 'assigned', -16.826, 29.302, 'device_demo_2', users.officerWest],
+      [parksByCode.VF, 'illegal_dump', 'Illegal dumping reported by tourist.', 'high', 'in_progress', -17.932, 25.842, 'device_demo_3', users.officerWest],
+      [parksByCode.HNP, 'poaching', 'Snare traps discovered at patrol point 7.', 'medium', 'resolved', -18.639, 26.255, 'device_demo_4', users.officerNorth],
+      [parksByCode.VF, 'security_breach', 'Unverified threat reported by night patrol.', 'critical', 'assigned', -17.919, 25.844, 'device_demo_16', users.officerWest],
+      [parksByCode.MP, 'facility_damage', 'Jetty handrail broken after heavy use.', 'medium', 'new', -16.801, 29.318, 'device_demo_17', users.officerWest]
+    ];
+
+    for (const item of incidentSamples) {
+      const existing = await db.get(
+        `SELECT id FROM incidents WHERE park_id = ? AND description = ?`,
+        [item[0], item[2]]
+      );
+      if (existing) continue;
+      await db.run(
+        `INSERT INTO incidents (park_id, incident_type, description, severity, status, gps_lat, gps_lng, device_id, reported_by, reported_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        item
+      );
+    }
   }
 
   await createAlert({
@@ -211,7 +334,7 @@ async function ensureSampleData(db, parksByCode, users) {
     alertType: 'water_status_issue',
     message: 'Seed alert: water status dry in Hwange sector A.',
     severity: 'critical',
-    status: 'new'
+    status: 'open'
   });
   await createAlert({
     parkId: parksByCode.MP,
@@ -220,7 +343,7 @@ async function ensureSampleData(db, parksByCode, users) {
     alertType: 'wildlife_event_issue',
     message: 'Seed alert: wildlife mortality event under review.',
     severity: 'critical',
-    status: 'assigned'
+    status: 'acknowledged'
   });
   await createAlert({
     parkId: parksByCode.VF,
@@ -229,7 +352,7 @@ async function ensureSampleData(db, parksByCode, users) {
     alertType: 'incident_high_severity',
     message: 'Seed alert: illegal dump incident requires escalation watch.',
     severity: 'critical',
-    status: 'in_progress'
+    status: 'acknowledged'
   });
 }
 
@@ -238,15 +361,20 @@ async function seed() {
   const db = await getDb();
 
   const parks = [
-    { name: 'Hwange National Park', code: 'HNP', region: 'Matabeleland North' },
-    { name: 'Mana Pools', code: 'MP', region: 'Mashonaland West' },
-    { name: 'Victoria Falls', code: 'VF', region: 'Matabeleland North' }
+    { name: 'Hwange National Park', code: 'HNP', region: 'Matabeleland North', managerEmail: 'hwange.manager@parksconnect.local', dailyCapacityLimit: 8 },
+    { name: 'Mana Pools', code: 'MP', region: 'Mashonaland West', managerEmail: 'manapools.manager@parksconnect.local', dailyCapacityLimit: 8 },
+    { name: 'Victoria Falls', code: 'VF', region: 'Matabeleland North', managerEmail: 'vicfalls.manager@parksconnect.local', dailyCapacityLimit: 8 }
   ];
 
   for (const park of parks) {
     await db.run(
-      `INSERT OR IGNORE INTO parks (name, code, region) VALUES (?, ?, ?)`,
-      [park.name, park.code, park.region]
+      `INSERT INTO parks (name, code, region, manager_email, daily_capacity_limit)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (code) DO UPDATE
+       SET region = EXCLUDED.region,
+           manager_email = EXCLUDED.manager_email,
+           daily_capacity_limit = EXCLUDED.daily_capacity_limit`,
+      [park.name, park.code, park.region, park.managerEmail, park.dailyCapacityLimit]
     );
   }
 
@@ -316,7 +444,12 @@ async function seed() {
   ];
 
   for (const [name, description] of facilityTypes) {
-    await db.run(`INSERT OR IGNORE INTO facility_types (name, description) VALUES (?, ?)`, [name, description]);
+    await db.run(
+      `INSERT INTO facility_types (name, description)
+       VALUES (?, ?)
+       ON CONFLICT (name) DO NOTHING`,
+      [name, description]
+    );
   }
 
   const typeRows = await db.all(`SELECT id, name FROM facility_types`);

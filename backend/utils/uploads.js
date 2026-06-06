@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
@@ -9,9 +10,12 @@ const __dirname = path.dirname(__filename);
 const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const allowedExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const maxUploadBytes = Number(process.env.UPLOAD_MAX_BYTES || 5 * 1024 * 1024);
+const isVercelRuntime = Boolean(process.env.VERCEL);
 
 const configuredUploadDir = process.env.FILE_UPLOAD_DIR
   ? path.resolve(process.cwd(), process.env.FILE_UPLOAD_DIR)
+  : isVercelRuntime
+    ? path.join(os.tmpdir(), 'parks-connect-uploads')
   : path.join(__dirname, '..', 'uploads');
 
 if (!fs.existsSync(configuredUploadDir)) {

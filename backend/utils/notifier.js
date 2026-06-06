@@ -1,76 +1,68 @@
 import { getDb } from './db.js';
+import { sendAlertEmail } from './mailer.js';
+import { detectFeedbackAlerts } from './alertEngine.js';
 
-const WORKFLOW_STATUSES = ['new', 'assigned', 'in_progress', 'resolved', 'escalated'];
+const LEGACY_STATUS_MAP = {
+  open: 'new',
+  acknowledged: 'assigned',
+  resolved: 'resolved'
+};
 
-function normalizeStatus(status) {
-  const normalized = String(status || 'new').trim().toLowerCase();
-  if (normalized === 'open') return 'new';
-  if (normalized === 'closed') return 'resolved';
-  return WORKFLOW_STATUSES.includes(normalized) ? normalized : 'new';
+const LEGACY_SEVERITY_MAP = {
+  low: 'info',
+  medium: 'info',
+  high: 'warning',
+  critical: 'critical'
+};
+
+const OPEN_ALERT_STATUSES = ['open', 'acknowledged'];
+
+function normalizeAlertStatus(status = 'open') {
+  const normalized = String(status || 'open').trim().toLowerCase();
+  return ['open', 'acknowledged', 'resolved'].includes(normalized) ? normalized : 'open';
 }
 
-function evaluateComparator(value, threshold, comparator = '>') {
-  const left = Number(value);
-  const right = Number(threshold);
-  if (!Number.isFinite(left) || !Number.isFinite(right)) return false;
-  if (comparator === '>') return left > right;
-  if (comparator === '>=') return left >= right;
-  if (comparator === '<') return left < right;
-  if (comparator === '<=') return left <= right;
-  return false;
+function normalizeAlertSeverity(severity = 'medium') {
+  const normalized = String(severity || 'medium').trim().toLowerCase();
+  return ['low', 'medium', 'high', 'critical'].includes(normalized) ? normalized : 'medium';
 }
 
-async function getThreshold(metric, parkId, defaultThreshold, defaultComparator = '>') {
+async function findManagerEmail(parkId) {
+  if (!parkId) return null;
   const db = await getDb();
-  const row = await db.get(
-    `SELECT threshold, comparator
-     FROM alert_thresholds
-     WHERE metric = ? AND (park_id = ? OR park_id IS NULL)
-     ORDER BY CASE WHEN park_id = ? THEN 0 ELSE 1 END, id DESC
-     LIMIT 1`,
-    [metric, parkId || null, parkId || null]
-  );
-  return {
-    threshold: row ? Number(row.threshold) : Number(defaultThreshold),
-    comparator: row?.comparator || defaultComparator
-  };
+  const row = await db.get(`SELECT manager_email, name FROM parks WHERE id = ?`, [parkId]);
+  return row || null;
 }
 
 export async function createAlert({
   alertType,
   message,
-  severity = 'warning',
+  summaryText = null,
+  severity = 'medium',
   parkId = null,
   sourceType = null,
   sourceId = null,
-  status = 'new',
-  slaHours = Number(process.env.ALERT_SLA_HOURS || 24)
+  status = 'open',
+  triggeredAt = null
 }) {
   const db = await getDb();
-  const normalizedStatus = normalizeStatus(status);
-  const safeSeverity = ['info', 'warning', 'critical'].includes(String(severity).toLowerCase())
-    ? String(severity).toLowerCase()
-    : 'warning';
-
+  const normalizedStatus = normalizeAlertStatus(status);
+  const normalizedSeverity = normalizeAlertSeverity(severity);
   const duplicate = await db.get(
     `SELECT id
      FROM alerts
      WHERE alert_type = ?
        AND COALESCE(park_id, -1) = COALESCE(?, -1)
-       AND message = ?
-       AND status IN ('new','assigned','in_progress','escalated')
-       AND created_at >= datetime('now', '-6 hours')
+       AND COALESCE(summary_text, message) = ?
+       AND COALESCE(alert_status, 'open') IN ('open', 'acknowledged')
+       AND COALESCE(triggered_at, created_at) >= NOW() - INTERVAL '12 hours'
      LIMIT 1`,
-    [alertType, parkId, message]
+    [alertType, parkId, summaryText || message]
   );
 
   if (duplicate) {
     return duplicate.id;
   }
-
-  const dueAt = normalizedStatus === 'resolved'
-    ? null
-    : `datetime('now', '+${Math.max(Number(slaHours) || 24, 1)} hours')`;
 
   const result = await db.run(
     `INSERT INTO alerts (
@@ -79,6 +71,10 @@ export async function createAlert({
       source_id,
       alert_type,
       message,
+      summary_text,
+      severity_level,
+      alert_status,
+      triggered_at,
       severity,
       status,
       escalation_state,
@@ -86,212 +82,140 @@ export async function createAlert({
       created_at,
       updated_at
     ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ${dueAt ? dueAt : 'NULL'}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?, 'none', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )`,
-    [parkId, sourceType, sourceId, alertType, message, safeSeverity, normalizedStatus, 'none']
+    [
+      parkId,
+      sourceType,
+      sourceId,
+      alertType,
+      message,
+      summaryText || message,
+      normalizedSeverity,
+      normalizedStatus,
+      triggeredAt,
+      LEGACY_SEVERITY_MAP[normalizedSeverity],
+      LEGACY_STATUS_MAP[normalizedStatus]
+    ]
   );
 
-  await db.run(
-    `INSERT INTO notifications (park_id, type, message, severity, resolved)
-     VALUES (?, ?, ?, ?, ?)`,
-    [parkId, alertType, message, safeSeverity, normalizedStatus === 'resolved' ? 1 : 0]
-  );
+  const manager = await findManagerEmail(parkId);
+  if (manager?.manager_email) {
+    await sendAlertEmail({
+      to: manager.manager_email,
+      subject: `Parks Connect alert: ${alertType}`,
+      text: `${summaryText || message}\n\nPark: ${manager.name || parkId}\nSeverity: ${normalizedSeverity}\nStatus: ${normalizedStatus}`
+    });
+  }
 
   return result.lastID;
 }
 
-export async function createNotification(type, message, severity = 'info', parkId = null) {
-  await createAlert({
-    alertType: type,
-    message,
-    severity,
-    parkId,
-    sourceType: 'manual_notification'
-  });
-}
-
-async function handleRatingDropAlert(parkId, sourceType = 'tourist_feedback', sourceId = null) {
+export async function evaluateFeedbackAlerts() {
   const db = await getDb();
-  const rule = await getThreshold('rating_drop_7d', parkId, 3, '<');
-  const averageRow = await db.get(
-    `SELECT AVG(rating) AS avg_rating
+  const parks = await db.all(`SELECT id, name, daily_capacity_limit, manager_email FROM parks`);
+
+  const droughtRows = await db.all(
+    `SELECT park_id, comments, rating, category
      FROM tourist_feedback
-     WHERE park_id = ?
-       AND submitted_at >= datetime('now', '-7 days')
-       AND rating IS NOT NULL`,
-    [parkId]
+     WHERE submitted_at >= NOW() - INTERVAL '7 days'`
   );
 
-  const avgRating = Number(averageRow?.avg_rating);
-  if (!Number.isFinite(avgRating)) return;
+  const infrastructureRows = await db.all(
+    `SELECT park_id, comments, rating, category
+     FROM tourist_feedback
+     WHERE submitted_at >= NOW() - INTERVAL '48 hours'`
+  );
 
-  if (evaluateComparator(avgRating, rule.threshold, rule.comparator)) {
-    await createAlert({
-      parkId,
-      sourceType,
-      sourceId,
-      alertType: 'rating_drop_7d',
-      severity: 'warning',
-      message: `Average rating over the last 7 days dropped to ${avgRating.toFixed(2)}.`
+  const securityRows = await db.all(
+    `SELECT park_id, comments, rating, category
+     FROM tourist_feedback
+     WHERE submitted_at >= NOW() - INTERVAL '15 minutes'`
+  );
+
+  const capacityRows = await db.all(
+    `SELECT park_id, comments, rating, category
+     FROM tourist_feedback
+     WHERE submitted_at >= DATE_TRUNC('day', NOW())`
+  );
+
+  const alerts = [
+    ...detectFeedbackAlerts(droughtRows, parks).filter((alert) => alert.alertType === 'drought_indicator'),
+    ...detectFeedbackAlerts(infrastructureRows, parks).filter((alert) => alert.alertType === 'infrastructure_failure'),
+    ...detectFeedbackAlerts(securityRows, parks).filter((alert) => alert.alertType === 'security_incident'),
+    ...detectFeedbackAlerts(capacityRows, parks).filter((alert) => alert.alertType === 'capacity_threshold')
+  ];
+
+  let created = 0;
+  for (const alert of alerts) {
+    const id = await createAlert({
+      alertType: alert.alertType,
+      message: alert.summaryText,
+      summaryText: alert.summaryText,
+      severity: alert.severity,
+      parkId: alert.parkId,
+      sourceType: 'feedback_cron'
     });
+    if (id) created += 1;
   }
+
+  return created;
 }
 
-export async function generateThresholdNotifications({
-  visitorsCount,
-  occupancyRate,
-  envCategory,
-  envStatus,
-  envSeverity,
-  eventType,
-  incidentSeverity,
-  incidentType,
-  rating,
-  triggerRatingDropCheck,
-  parkId,
-  sourceType,
-  sourceId
-}) {
-  if (!parkId) {
-    return;
+export async function generateThresholdNotifications() {
+  return 0;
+}
+
+export async function listOpenAlerts({ parkIds = null } = {}) {
+  const db = await getDb();
+  const params = [];
+  const filters = [`COALESCE(a.alert_status, CASE WHEN a.status = 'resolved' THEN 'resolved' ELSE 'open' END) IN ('open','acknowledged')`];
+
+  if (parkIds !== null) {
+    if (!parkIds.length) return [];
+    filters.push(`a.park_id IN (${parkIds.map(() => '?').join(',')})`);
+    params.push(...parkIds);
   }
 
-  if (visitorsCount !== undefined && visitorsCount !== null) {
-    const rule = await getThreshold('visitors', parkId, 500, '>');
-    if (evaluateComparator(visitorsCount, rule.threshold, rule.comparator)) {
-      await createAlert({
-        parkId,
-        sourceType: sourceType || 'visitor_log',
-        sourceId,
-        alertType: 'visitor_volume_high',
-        message: `High visitor volume detected (${visitorsCount}).`,
-        severity: 'warning'
-      });
-    }
-  }
+  return db.all(
+    `SELECT
+      a.id,
+      a.park_id,
+      p.name AS park_name,
+      a.alert_type,
+      COALESCE(a.summary_text, a.message) AS summary_text,
+      COALESCE(a.triggered_at, a.created_at) AS triggered_at,
+      COALESCE(a.severity_level,
+        CASE a.severity WHEN 'critical' THEN 'critical' WHEN 'warning' THEN 'high' ELSE 'medium' END
+      ) AS severity,
+      COALESCE(a.alert_status,
+        CASE
+          WHEN a.status = 'resolved' THEN 'resolved'
+          WHEN a.status IN ('assigned','in_progress','escalated') THEN 'acknowledged'
+          ELSE 'open'
+        END
+      ) AS status
+     FROM alerts a
+     LEFT JOIN parks p ON p.id = a.park_id
+     WHERE ${filters.join(' AND ')}
+     ORDER BY COALESCE(a.triggered_at, a.created_at) DESC`,
+    params
+  );
+}
 
-  if (occupancyRate !== undefined && occupancyRate !== null) {
-    const rule = await getThreshold('occupancy', parkId, 0.85, '>');
-    if (evaluateComparator(occupancyRate, rule.threshold, rule.comparator)) {
-      await createAlert({
-        parkId,
-        sourceType: sourceType || 'visitor_log',
-        sourceId,
-        alertType: 'occupancy_threshold_exceeded',
-        message: `Occupancy exceeded threshold at ${(Number(occupancyRate) * 100).toFixed(0)}%.`,
-        severity: 'critical'
-      });
-    }
-  }
-
-  const category = String(envCategory || '').toLowerCase();
-  const normalizedEnvStatus = String(envStatus || '').toLowerCase();
-  const normalizedEventType = String(eventType || '').toLowerCase();
-
-  if (category === 'water' && ['dry', 'broken'].includes(normalizedEnvStatus)) {
-    await createAlert({
-      parkId,
-      sourceType: sourceType || 'environmental_log',
-      sourceId,
-      alertType: 'water_status_issue',
-      message: `Water status flagged as ${normalizedEnvStatus}.`,
-      severity: 'critical'
-    });
-  }
-
-  if (category === 'waste' && ['overflow', 'illegal_dump'].includes(normalizedEnvStatus)) {
-    await createAlert({
-      parkId,
-      sourceType: sourceType || 'environmental_log',
-      sourceId,
-      alertType: 'waste_status_issue',
-      message: `Waste status flagged as ${normalizedEnvStatus}.`,
-      severity: 'critical'
-    });
-  }
-
-  if (category === 'wildlife' && ['mortality', 'conflict'].includes(normalizedEventType)) {
-    await createAlert({
-      parkId,
-      sourceType: sourceType || 'environmental_log',
-      sourceId,
-      alertType: 'wildlife_event_issue',
-      message: `Wildlife event recorded: ${normalizedEventType}.`,
-      severity: 'critical'
-    });
-  }
-
-  const normalizedEnvSeverity = String(envSeverity || '').toLowerCase();
-  if (normalizedEnvSeverity === 'high' || normalizedEnvSeverity === 'critical') {
-    await createAlert({
-      parkId,
-      sourceType: sourceType || 'environmental_log',
-      sourceId,
-      alertType: 'environment_high_severity',
-      message: `Environmental severity reported as ${normalizedEnvSeverity}.`,
-      severity: 'critical'
-    });
-  }
-
-  const normalizedIncidentSeverity = String(incidentSeverity || '').toLowerCase();
-  if (['high', 'critical'].includes(normalizedIncidentSeverity)) {
-    await createAlert({
-      parkId,
-      sourceType: sourceType || 'incident',
-      sourceId,
-      alertType: 'incident_high_severity',
-      message: `High-severity incident reported (${incidentType || 'incident'}).`,
-      severity: 'critical'
-    });
-  }
-
-  if (rating !== undefined && rating !== null && Number(rating) <= 2) {
-    await createAlert({
-      parkId,
-      sourceType: sourceType || 'tourist_feedback',
-      sourceId,
-      alertType: 'low_feedback_rating',
-      message: `Low feedback rating submitted (${Number(rating).toFixed(1)}/5).`,
-      severity: 'warning'
-    });
-  }
-
-  if (triggerRatingDropCheck) {
-    await handleRatingDropAlert(parkId, sourceType, sourceId);
-  }
+export async function updateAlertStatus(id, status) {
+  const db = await getDb();
+  const normalizedStatus = normalizeAlertStatus(status);
+  await db.run(
+    `UPDATE alerts
+     SET alert_status = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [normalizedStatus, LEGACY_STATUS_MAP[normalizedStatus], id]
+  );
 }
 
 export async function escalateOverdueAlerts() {
-  const db = await getDb();
-  const overdue = await db.all(
-    `SELECT id, park_id, alert_type
-     FROM alerts
-     WHERE status IN ('new','assigned','in_progress')
-       AND due_at IS NOT NULL
-       AND due_at <= CURRENT_TIMESTAMP`
-  );
-
-  if (!overdue.length) {
-    return 0;
-  }
-
-  for (const alert of overdue) {
-    await db.run(
-      `UPDATE alerts
-       SET status = 'escalated',
-           escalation_state = 'auto_sla',
-           escalated_at = CURRENT_TIMESTAMP,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [alert.id]
-    );
-
-    await db.run(
-      `INSERT INTO notifications (park_id, type, message, severity, resolved)
-       VALUES (?, 'sla_escalation', ?, 'critical', 0)`,
-      [alert.park_id, `Alert #${alert.id} escalated automatically after SLA breach.`]
-    );
-  }
-
-  return overdue.length;
+  return 0;
 }
+
+export { normalizeAlertSeverity, normalizeAlertStatus, OPEN_ALERT_STATUSES };

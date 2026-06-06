@@ -10,6 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 const IT_ADMIN_KEY = process.env.IT_ADMIN_KEY || 'dev_it_admin_key';
 const ALLOWED_ROLES = ['authority_admin', 'environment_officer', 'tourism_operator', 'tourist'];
 const WEB_PORTAL_ROLES = ['authority_admin', 'environment_officer', 'tourism_operator'];
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function mapIncomingRole(role, fallback = 'tourism_operator') {
   if (!role) return fallback;
@@ -29,6 +30,14 @@ function roleRedirect(role) {
   if (role === 'environment_officer') return '/dashboard?portal=environment';
   if (role === 'tourism_operator') return '/dashboard?portal=tourism';
   return '/mobile';
+}
+
+function isStrongPassword(password) {
+  if (typeof password !== 'string') return false;
+  if (password.length < 8) return false;
+  const hasLetter = /[A-Za-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  return hasLetter && hasNumber;
 }
 
 export async function register(req, res) {
@@ -153,6 +162,36 @@ export async function selfRegister(req, res) {
   const parks = await getAssignedParkIds(user);
   const token = signToken({ ...user, parks });
   return res.status(201).json({ user: { ...user, parks }, token, redirect: roleRedirect(role) });
+}
+
+export async function forgotPassword(req, res) {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const newPassword = String(req.body?.new_password || '');
+  const confirmPassword = String(req.body?.confirm_password || '');
+  const adminKey = String(req.body?.it_admin_key || '');
+
+  if (!EMAIL_REGEX.test(email)) {
+    return res.status(400).json({ message: 'Provide a valid email address.' });
+  }
+  if (!isStrongPassword(newPassword)) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters and include letters and numbers.' });
+  }
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ message: 'Password confirmation does not match.' });
+  }
+  if (!adminKey || adminKey !== IT_ADMIN_KEY) {
+    return res.status(403).json({ message: 'Invalid admin key' });
+  }
+
+  const db = await getDb();
+  const user = await db.get(`SELECT id FROM users WHERE email = ?`, [email]);
+  if (!user) {
+    return res.status(404).json({ message: 'No account found for this email.' });
+  }
+
+  const hashed = await bcrypt.hash(newPassword, 12);
+  await db.run(`UPDATE users SET password = ? WHERE id = ?`, [hashed, user.id]);
+  return res.json({ message: 'Password updated successfully.' });
 }
 
 export function isWebPortalRole(role) {

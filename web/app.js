@@ -1,10 +1,8 @@
 import express from 'express';
 import path from 'path';
-import fs from 'fs';
 import os from 'os';
 import { fileURLToPath } from 'url';
-import session from 'express-session';
-import connectSqlite3 from 'connect-sqlite3';
+import cookieSession from 'cookie-session';
 import dotenv from 'dotenv';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
@@ -12,6 +10,7 @@ import expressLayouts from 'express-ejs-layouts';
 import morgan from 'morgan';
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
+import publicRoutes from './routes/public.js';
 
 dotenv.config();
 
@@ -19,12 +18,6 @@ const app = express();
 const port = process.env.WEB_PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SQLiteStore = connectSqlite3(session);
-const sessionStoreDir = process.env.SESSION_STORE_DIR || path.join(__dirname, 'data');
-
-if (!fs.existsSync(sessionStoreDir)) {
-  fs.mkdirSync(sessionStoreDir, { recursive: true });
-}
 
 const logServerAddresses = (listenPort) => {
   const localhostUrl = `http://localhost:${listenPort}`;
@@ -68,34 +61,28 @@ app.use(
 
 const sessionMaxAge = Number(process.env.SESSION_TTL_MS || 7 * 24 * 60 * 60 * 1000);
 app.use(
-  session({
+  cookieSession({
     name: 'parks_connect.sid',
-    store: new SQLiteStore({
-      dir: sessionStoreDir,
-      db: process.env.SESSION_STORE_DB || 'sessions.db',
-      table: 'sessions',
-      ttl: Math.floor(sessionMaxAge / 1000)
-    }),
-    secret: process.env.SESSION_SECRET || 'dev_secret',
-    resave: false,
-    saveUninitialized: false,
-    rolling: true,
+    keys: [process.env.SESSION_SECRET || 'dev_secret'],
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: sessionMaxAge,
       sameSite: 'lax'
-    }
+    },
+    signed: true
   })
 );
 
 app.use((req, res, next) => {
-  res.locals.user = req.session.user;
+  res.locals.user = req.session?.user || null;
+  res.locals.currentPath = req.path;
   next();
 });
 
 app.get('/', (_req, res) => res.redirect('/dashboard'));
 
+app.use('/', publicRoutes);
 app.use('/', authRoutes);
 app.use('/dashboard', dashboardRoutes);
 
@@ -104,7 +91,11 @@ app.use((err, _req, res, _next) => {
   res.status(500).render('error', { message: 'Something went wrong.' });
 });
 
-app.listen(port, () => {
-  console.log(`Web app running on port ${port}`);
-  logServerAddresses(port);
-});
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Web app running on port ${port}`);
+    logServerAddresses(port);
+  });
+}
+
+export default app;

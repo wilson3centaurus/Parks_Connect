@@ -1,5 +1,5 @@
 import { getDb } from '../utils/db.js';
-import { generateThresholdNotifications } from '../utils/notifier.js';
+import { normalizeFeedbackCategory, normalizeVisitDate } from '../utils/feedbackSchema.js';
 
 const DUPLICATE_RADIUS_METERS = Number(process.env.INCIDENT_DUPLICATE_RADIUS_METERS || 300);
 const DUPLICATE_WINDOW_MINUTES = Number(process.env.INCIDENT_DUPLICATE_WINDOW_MINUTES || 60);
@@ -60,6 +60,8 @@ export async function submitMobileFeedback(req, res) {
     const gpsLat = parseNumber(req.body?.gps_lat);
     const gpsLng = parseNumber(req.body?.gps_lng);
     const status = normalizeFeedbackStatus(req.body?.status || 'new');
+    const category = normalizeFeedbackCategory(req.body?.category || 'general');
+    const visitDate = normalizeVisitDate(req.body?.visit_date, new Date().toISOString().slice(0, 10));
 
     if (!parkId) {
       return res.status(400).json({ message: 'park_id is required' });
@@ -83,19 +85,18 @@ export async function submitMobileFeedback(req, res) {
       [parkId, submittedBy, rating, comments, gpsLat, gpsLng, photoPath, deviceId, status]
     );
 
-    const inserted = await db.run(
-      `INSERT INTO tourist_feedback (legacy_feedback_id, park_id, submitted_by, type, rating, comments, gps_lat, gps_lng, photo_path, device_id, status)
-       VALUES (?, ?, ?, 'tourist', ?, ?, ?, ?, ?, ?, ?)`,
-      [legacyInsert.lastID, parkId, submittedBy, rating, comments, gpsLat, gpsLng, photoPath, deviceId, status]
+    await db.run(
+      `UPDATE feedback
+       SET category = ?, channel = 'mobile', visit_date = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [category, visitDate, legacyInsert.lastID]
     );
 
-    await generateThresholdNotifications({
-      rating,
-      parkId,
-      triggerRatingDropCheck: true,
-      sourceType: 'tourist_feedback',
-      sourceId: inserted.lastID
-    });
+    const inserted = await db.run(
+      `INSERT INTO tourist_feedback (legacy_feedback_id, park_id, submitted_by, type, category, rating, comments, channel, visit_date, gps_lat, gps_lng, photo_path, device_id, status)
+       VALUES (?, ?, ?, 'tourist', ?, ?, ?, 'mobile', ?, ?, ?, ?, ?, ?)`,
+      [legacyInsert.lastID, parkId, submittedBy, category, rating, comments, visitDate, gpsLat, gpsLng, photoPath, deviceId, status]
+    );
 
     return res.status(201).json({
       id: inserted.lastID,
@@ -118,7 +119,7 @@ export async function listMobileFeedback(req, res) {
     }
 
     const rows = await db.all(
-      `SELECT id, park_id, submitted_by, type, rating, comments, gps_lat, gps_lng, photo_path, status, submitted_at
+      `SELECT id, park_id, submitted_by, type, category, channel, visit_date, rating, comments, gps_lat, gps_lng, photo_path, status, submitted_at
        FROM tourist_feedback
        WHERE device_id = ?
        ORDER BY submitted_at DESC
@@ -171,7 +172,7 @@ export async function submitMobileIncident(req, res) {
        FROM incidents
        WHERE park_id = ?
          AND lower(incident_type) = ?
-         AND reported_at >= datetime('now', ?)
+         AND reported_at >= NOW() - CAST(? AS interval)
        ORDER BY reported_at DESC`,
       [parkId, incidentType, timeWindow]
     );
@@ -196,14 +197,6 @@ export async function submitMobileIncident(req, res) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [parkId, incidentType, description, severity, status, gpsLat, gpsLng, photoPath, deviceId]
     );
-
-    await generateThresholdNotifications({
-      parkId,
-      incidentSeverity: severity,
-      incidentType,
-      sourceType: 'incident',
-      sourceId: created.lastID
-    });
 
     return res.status(201).json({
       duplicate: false,

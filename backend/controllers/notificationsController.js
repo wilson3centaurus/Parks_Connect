@@ -1,61 +1,29 @@
-import { getDb } from '../utils/db.js';
 import { getAssignedParkIds, normalizeRole } from '../utils/parks.js';
+import { listOpenAlerts, updateAlertStatus } from '../utils/notifier.js';
 
 export async function listNotifications(req, res) {
-  const db = await getDb();
   const role = normalizeRole(req.user.role);
   const allowedParks = await getAssignedParkIds(req.user);
-  const filters = [];
-  const params = [];
-  const { resolved } = req.query;
+  const parkIds = role === 'authority_admin' ? null : allowedParks;
+  const rows = await listOpenAlerts({ parkIds });
 
-  if (role !== 'authority_admin') {
-    if (allowedParks.length === 0) return res.json([]);
-    filters.push(`(park_id IS NULL OR park_id IN (${allowedParks.map(() => '?').join(',')}))`);
-    params.push(...allowedParks);
-  }
-
-  if (resolved === 'false') {
-    filters.push(`status != 'resolved'`);
-  } else if (resolved === 'true') {
-    filters.push(`status = 'resolved'`);
-  }
-
-  const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-  const rows = await db.all(
-    `SELECT
-      id,
-      park_id,
-      alert_type as type,
-      message,
-      severity,
-      status,
-      CASE WHEN status = 'resolved' THEN 1 ELSE 0 END AS resolved,
-      created_at,
-      due_at,
-      escalated_at
-     FROM alerts
-     ${whereClause}
-     ORDER BY (status = 'resolved') ASC, created_at DESC`,
-    params
+  res.json(
+    rows.map((row) => ({
+      id: row.id,
+      park_id: row.park_id,
+      park_name: row.park_name,
+      type: row.alert_type,
+      message: row.summary_text,
+      summary_text: row.summary_text,
+      severity: row.severity,
+      status: row.status,
+      created_at: row.triggered_at,
+      triggered_at: row.triggered_at
+    }))
   );
-
-  res.json(rows);
 }
 
 export async function resolveNotification(req, res) {
-  const { id } = req.params;
-  const db = await getDb();
-  const note = await db.get(`SELECT park_id FROM alerts WHERE id = ?`, [id]);
-  if (!note) return res.status(404).json({ message: 'Not found' });
-
-  if (normalizeRole(req.user.role) !== 'authority_admin') {
-    const allowed = await getAssignedParkIds(req.user);
-    if (note.park_id && !allowed.includes(note.park_id)) {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
-  }
-
-  await db.run(`UPDATE alerts SET status = 'resolved', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [id]);
+  await updateAlertStatus(req.params.id, 'resolved');
   res.json({ message: 'resolved' });
 }

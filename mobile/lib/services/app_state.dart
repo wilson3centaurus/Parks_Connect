@@ -41,7 +41,7 @@ class AppState extends ChangeNotifier {
     if (userJson != null) {
       final decoded = jsonDecode(userJson);
       if (decoded is Map) {
-        user = Map<String, dynamic>.from(decoded as Map);
+        user = Map<String, dynamic>.from(decoded);
       }
     }
     notifyListeners();
@@ -55,7 +55,9 @@ class AppState extends ChangeNotifier {
   }) async {
     authToken = token;
     this.parks = parks ?? this.parks;
-    activeParkId = parkId ?? activeParkId ?? (this.parks.isNotEmpty ? this.parks.first['id'] as int? : null);
+    activeParkId = parkId ??
+        activeParkId ??
+        (this.parks.isNotEmpty ? this.parks.first['id'] as int? : null);
     this.user = user ?? this.user;
     notifyListeners();
     await _persistSession();

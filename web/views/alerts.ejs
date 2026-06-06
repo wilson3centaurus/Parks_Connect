@@ -1,0 +1,112 @@
+<%
+  const severityTotals = alertSummary || { critical: 1, high: 2, medium: 5, low: 12 };
+  const recentAlerts = alertRows || [];
+  const selectedAlert = recentAlerts[0] || {};
+%>
+
+<section class="zim-page-header d-flex justify-content-between align-items-start">
+  <div>
+    <h1>Environmental Alerts</h1>
+    <p>Monitor and respond to critical environmental conditions</p>
+  </div>
+  <button class="zim-button zim-button--secondary" type="button"><i class="fa-solid fa-download"></i> Export Report</button>
+</section>
+
+<section class="zim-grid-4 mb-4">
+  <article class="zim-card"><div class="zim-kpi"><div class="zim-kpi-icon zim-kpi-icon--danger"><i class="fa-solid fa-triangle-exclamation"></i></div><div><div class="zim-kpi-value"><%= severityTotals.critical %></div><div class="zim-kpi-label">Critical</div><small>Requires immediate attention</small></div></div></article>
+  <article class="zim-card"><div class="zim-kpi"><div class="zim-kpi-icon" style="background:#FAEEDA;color:#854F0B;"><i class="fa-solid fa-triangle-exclamation"></i></div><div><div class="zim-kpi-value"><%= severityTotals.high %></div><div class="zim-kpi-label">High</div><small>Requires attention</small></div></div></article>
+  <article class="zim-card"><div class="zim-kpi"><div class="zim-kpi-icon" style="background:#FFF2C6;color:#BA8B00;"><i class="fa-solid fa-triangle-exclamation"></i></div><div><div class="zim-kpi-value"><%= severityTotals.medium %></div><div class="zim-kpi-label">Medium</div><small>Monitor closely</small></div></div></article>
+  <article class="zim-card"><div class="zim-kpi"><div class="zim-kpi-icon"><i class="fa-solid fa-circle-check"></i></div><div><div class="zim-kpi-value"><%= severityTotals.low %></div><div class="zim-kpi-label">Low</div><small>No immediate action</small></div></div></article>
+</section>
+
+<section class="zim-grid-3">
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <h2>Active Alerts (<%= recentAlerts.length %>)</h2>
+      <select class="zim-select"><option>Filter</option></select>
+    </div>
+    <div class="zim-alert-list">
+      <% recentAlerts.forEach((alert) => { %>
+        <article class="zim-alert-item zim-alert-item--<%= alert.severity || 'medium' %>">
+          <div>
+            <strong><%= alert.summary_text || alert.message %></strong>
+            <p><%= alert.park_name || `Park ${alert.park_id || ''}` %></p>
+            <p><%= new Date(alert.triggered_at || Date.now()).toLocaleString('en-ZW', { dateStyle: 'medium', timeStyle: 'short' }) %></p>
+          </div>
+          <span class="zim-badge zim-badge--<%= alert.severity || 'medium' %>"><%= alert.severity || 'medium' %></span>
+        </article>
+      <% }) %>
+    </div>
+  </article>
+
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <h2>Alert Location</h2>
+    </div>
+    <div style="height: 406px; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg, #d5efcb, #c7e6c0); border: 1px solid var(--zp-border); position: relative;">
+      <div style="position:absolute; inset:0; background:
+        radial-gradient(circle at 55% 40%, rgba(67, 131, 233, 0.22), transparent 8rem),
+        linear-gradient(120deg, transparent 0 40%, rgba(95, 165, 222, 0.28) 40% 43%, transparent 43% 100%),
+        linear-gradient(180deg, rgba(255,255,255,0.14), transparent 45%);
+      "></div>
+      <div style="position:absolute; top:14px; left:14px; display:flex; flex-direction:column; gap:8px;">
+        <button class="zim-button zim-button--ghost" style="width:40px;height:40px;padding:0;">+</button>
+        <button class="zim-button zim-button--ghost" style="width:40px;height:40px;padding:0;">−</button>
+      </div>
+      <div style="position:absolute; left:50%; top:48%; transform:translate(-50%,-50%); width:42px; height:42px; border-radius:50%; background:#d62828; display:grid; place-items:center; color:#fff;">
+        <i class="fa-solid fa-location-dot"></i>
+      </div>
+    </div>
+  </article>
+
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <h2>Alert Details</h2>
+      <span class="zim-badge zim-badge--critical">Requires attention</span>
+    </div>
+    <div class="d-grid gap-3">
+      <div><small class="text-muted">Observation Type</small><strong class="d-block"><%= selectedAlert.alert_type || 'Illegal Logging Activity' %></strong></div>
+      <div><small class="text-muted">Severity Level</small><span class="zim-badge zim-badge--<%= selectedAlert.severity || 'critical' %>"><%= selectedAlert.severity || 'critical' %></span></div>
+      <div><small class="text-muted">Location</small><strong class="d-block"><%= selectedAlert.park_name || 'Hwange National Park' %></strong></div>
+      <div><small class="text-muted">Description</small><p><%= selectedAlert.summary_text || selectedAlert.message || 'Fresh evidence of illegal logging activities observed near the Sinamatella area.' %></p></div>
+      <div><small class="text-muted">Alert ID</small><strong class="d-block mono">ALERT-2025-05-19-0001</strong></div>
+      <div><small class="text-muted">Status</small><span class="zim-badge zim-badge--high"><%= selectedAlert.status || 'open' %></span></div>
+      <div class="d-flex gap-2">
+        <button class="zim-button flex-fill" type="button"><i class="fa-regular fa-eye"></i> View Full Details</button>
+        <button class="zim-button zim-button--secondary flex-fill" type="button"><i class="fa-solid fa-check"></i> Acknowledge Alert</button>
+      </div>
+    </div>
+  </article>
+</section>
+
+<article class="zim-card mt-4">
+  <div class="zim-section-title">
+    <h2>Recent Alert History</h2>
+  </div>
+  <div class="zim-table-wrap">
+    <table class="table zim-table">
+      <thead>
+        <tr>
+          <th>Alert ID</th>
+          <th>Type</th>
+          <th>Location</th>
+          <th>Severity</th>
+          <th>Date & Time</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% recentAlerts.forEach((alert, index) => { %>
+          <tr>
+            <td class="mono">ALERT-2025-05-19-<%= String(index + 1).padStart(4, '0') %></td>
+            <td><%= alert.alert_type || 'Environmental Alert' %></td>
+            <td><%= alert.park_name || `Park ${alert.park_id || ''}` %></td>
+            <td><span class="zim-badge zim-badge--<%= alert.severity || 'medium' %>"><%= alert.severity || 'medium' %></span></td>
+            <td><%= new Date(alert.triggered_at || Date.now()).toLocaleString('en-ZW', { dateStyle: 'medium', timeStyle: 'short' }) %></td>
+            <td><span class="zim-badge zim-badge--high"><%= alert.status || 'open' %></span></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</article>

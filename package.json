@@ -1,11 +1,15 @@
 ﻿{
   "name": "zimparks-platform",
   "version": "1.0.0",
-  "description": "Centralized ZimParks platform built with Express, MySQL, and EJS.",
+  "description": "Legacy monolith shell for Parks Connect. Active deploys live in backend/ and web/.",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
+    "start": "npm --prefix web run start",
+    "dev": "npm --prefix web run dev",
+    "dev:web": "npm --prefix web run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "start:legacy": "node app.js",
+    "dev:legacy": "nodemon app.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

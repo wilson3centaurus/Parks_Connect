@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { once } from 'events';
 import { fileURLToPath } from 'url';
@@ -8,7 +9,9 @@ import { getAssignedParkIds, normalizeRole } from '../utils/parks.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const exportsDir = path.join(__dirname, '..', 'exports');
+const exportsDir = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'parks-connect-exports')
+  : path.join(__dirname, '..', 'exports');
 
 if (!fs.existsSync(exportsDir)) {
   fs.mkdirSync(exportsDir, { recursive: true });
