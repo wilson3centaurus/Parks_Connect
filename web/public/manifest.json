@@ -1,40 +1,96 @@
 {
+  "id": "/",
   "name": "Parks Connect — Zimbabwe National Parks",
   "short_name": "ZimParks",
-  "description": "Explore Zimbabwe's national parks. Visit as a tourist, submit feedback, or access the staff portal.",
-  "start_url": "/parks",
+  "description": "Explore Zimbabwe's 11 national parks. Book visits, submit feedback, or access the staff portal.",
+  "start_url": "/parks?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#0a1628",
   "theme_color": "#1D9E75",
   "orientation": "portrait-primary",
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/public/images/logo.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/logo.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/public/images/logo.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "screenshots": [],
-  "categories": ["travel", "lifestyle"],
+  "categories": ["travel", "lifestyle", "utilities"],
   "shortcuts": [
     {
       "name": "Explore Parks",
       "short_name": "Parks",
-      "url": "/parks",
-      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+      "description": "Browse Zimbabwe's 11 national parks",
+      "url": "/parks?utm_source=shortcut",
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
-      "name": "Submit Feedback",
+      "name": "Rate Your Visit",
       "short_name": "Feedback",
-      "url": "/feedback",
-      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+      "description": "Submit park visit feedback",
+      "url": "/feedback?utm_source=shortcut",
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Staff Portal",
+      "short_name": "Login",
+      "description": "ZimParks staff login",
+      "url": "/login?utm_source=shortcut",
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96", "type": "image/png" }]
     }
   ]
 }

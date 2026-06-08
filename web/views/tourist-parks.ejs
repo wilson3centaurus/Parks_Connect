@@ -7,7 +7,13 @@
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1D9E75">
   <meta name="description" content="Explore Zimbabwe's 11 national parks — wildlife, attractions, things to do, and visitor information.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ZimParks">
   <link rel="apple-touch-icon" href="/public/images/logo.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/public/images/logo.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/public/images/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -658,7 +664,9 @@ async function submitBooking() {
 document.getElementById('bookModal').addEventListener('click', e => { if (e.target === document.getElementById('bookModal')) closeBookModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); closeBookModal(); } });
 
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => reg.update()).catch(() => {});
+}
 </script>
 </body>
 </html>

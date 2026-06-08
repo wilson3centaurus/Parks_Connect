@@ -134,6 +134,9 @@ app.use('/api-proxy', async (req, res) => {
   }
 });
 
+// ── Offline fallback ──────────────────────────────────────────────────────────
+app.get('/offline', (_req, res) => res.render('offline', { layout: false }));
+
 // ── Home page ─────────────────────────────────────────────────────────────────
 app.get('/', async (req, res) => {
   if (req.session?.user) return res.redirect('/dashboard');
