@@ -1,0 +1,58 @@
+<section class="zim-page-header mb-4">
+  <h1>Settings</h1>
+  <p>System configuration &amp; preferences</p>
+</section>
+
+<div class="zim-grid-2">
+  <article class="zim-card">
+    <h5 class="mb-3"><i class="fa-solid fa-key me-2" style="color:var(--zp-green)"></i>Change Password</h5>
+    <form method="POST" action="/dashboard/change-password">
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">Current Password</label>
+        <input type="password" name="current_password" class="form-control form-control-sm" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">New Password</label>
+        <input type="password" name="new_password" class="form-control form-control-sm" required minlength="8">
+        <div class="form-text" style="font-size:11px">At least 8 characters with letters and numbers</div>
+      </div>
+      <button type="submit" class="zim-button">Update Password</button>
+    </form>
+  </article>
+
+  <article class="zim-card">
+    <h5 class="mb-3"><i class="fa-solid fa-palette me-2" style="color:var(--zp-green)"></i>Appearance</h5>
+    <p style="font-size:13px;color:var(--zp-muted)">Theme preference is saved locally in your browser.</p>
+    <div class="d-flex gap-2 mt-3">
+      <button class="zim-button" onclick="setTheme('light')">
+        <i class="fa-solid fa-sun me-1"></i> Light
+      </button>
+      <button class="zim-button zim-button--secondary" onclick="setTheme('dark')">
+        <i class="fa-solid fa-moon me-1"></i> Dark
+      </button>
+    </div>
+    <script>
+      function setTheme(t) {
+        localStorage.setItem('zp-theme', t);
+        document.documentElement.setAttribute('data-theme', t);
+        const icon = document.getElementById('themeIcon');
+        if (icon) icon.className = t === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+      }
+    </script>
+  </article>
+
+  <article class="zim-card">
+    <h5 class="mb-3"><i class="fa-solid fa-circle-info me-2" style="color:var(--zp-green)"></i>Account Info</h5>
+    <% const u = locals.user || {}; %>
+    <table style="font-size:13px;width:100%;border-collapse:collapse">
+      <tr><td style="padding:5px 0;color:var(--zp-muted);width:120px">Name</td><td><strong><%= u.name || '—' %></strong></td></tr>
+      <tr><td style="padding:5px 0;color:var(--zp-muted)">Email</td><td><%= u.email || '—' %></td></tr>
+      <tr><td style="padding:5px 0;color:var(--zp-muted)">Role</td><td><span class="badge" style="background:var(--zp-green)"><%= u.role || '—' %></span></td></tr>
+    </table>
+  </article>
+
+  <article class="zim-card" style="opacity:0.6">
+    <h5 class="mb-2"><i class="fa-solid fa-bell me-2" style="color:var(--zp-amber)"></i>Notifications <span class="badge bg-secondary ms-1" style="font-size:10px">Coming Soon</span></h5>
+    <p style="font-size:13px;color:var(--zp-muted)">Email and in-app notification preferences will be configurable here.</p>
+  </article>
+</div>

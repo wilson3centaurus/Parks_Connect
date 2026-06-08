@@ -413,6 +413,47 @@ router.get('/', ensureAuth, ensurePortalAccess, async (req, res) => {
   }
 });
 
+router.get('/parks', ensureAuth, ensurePortalAccess, async (req, res) => {
+  try {
+    const token = req.session.token;
+    const dbParks = await fetchWithAuth('/api/parks', token).catch(() => []);
+
+    const parksWithDetail = await Promise.all(
+      dbParks.map(async park => {
+        const detail = await fetchWithAuth(`/api/parks/${park.id}`, token)
+          .catch(() => ({ officers: [], visitorStats: {}, recentLogs: [] }));
+        return {
+          ...park,
+          officers: detail.officers || [],
+          visitorStats: detail.visitorStats || {},
+          recentLogs: detail.recentLogs || []
+        };
+      })
+    );
+
+    return res.render('parks', {
+      user: req.session.user,
+      section: 'parks',
+      topbarDateRange: new Date().toLocaleDateString('en-ZW', { dateStyle: 'medium' }),
+      showFiltersButton: false,
+      notificationCount: 3,
+      parks: parksWithDetail
+    });
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).render('error', { message: 'Unable to load parks' });
+  }
+});
+
+router.get('/parks/:id/detail', ensureAuth, async (req, res) => {
+  try {
+    const data = await fetchWithAuth(`/api/parks/${req.params.id}`, req.session.token);
+    return res.json(data);
+  } catch (err) {
+    res.status(err.response?.status || 500).json({ message: 'Unable to load park detail' });
+  }
+});
+
 router.get('/revenue', ensureAuth, ensurePortalAccess, async (req, res) => {
   try {
     const context = await fetchSharedDashboardContext(req);
@@ -640,6 +681,54 @@ router.get('/reports/:reportType/pdf', ensureAuth, ensurePortalAccess, async (re
   }
 });
 
+// ── Parks ─────────────────────────────────────────────────────────────────────
+
+router.get('/parks', ensureAuth, ensurePortalAccess, async (req, res) => {
+  try {
+    const token = req.session.token;
+    const [dbParks, allUsers] = await Promise.all([
+      fetchWithAuth('/api/parks', token).catch(() => []),
+      fetchWithAuth('/api/auth/users', token).catch(() => [])
+    ]);
+
+    const parks = await Promise.all(
+      dbParks.map(async park => {
+        const detail = await fetchWithAuth(`/api/parks/${park.id}`, token).catch(() => ({}));
+        return { ...park, officers: detail.officers || [], visitorStats: detail.visitorStats || {}, recentLogs: detail.recentLogs || [] };
+      })
+    );
+
+    return res.render('parks', {
+      user: req.session.user,
+      section: 'parks',
+      topbarDateRange: new Date().toLocaleDateString('en-ZW', { dateStyle: 'medium' }),
+      showFiltersButton: false,
+      notificationCount: 0,
+      parks,
+      allUsers
+    });
+  } catch (err) {
+    console.error('[parks]', err.response?.data || err.message);
+    res.status(500).render('error', { message: 'Unable to load parks' });
+  }
+});
+
+router.post('/parks/assign', ensureAuth, ensurePortalAccess, async (req, res) => {
+  if (req.session.user.role !== 'authority_admin') return res.status(403).json({ message: 'Forbidden' });
+  const body = req.body || {};
+  try {
+    const result = await axios.post(
+      `${backendUrl}/api/parks/assign`,
+      { user_id: Number(body.user_id), park_id: Number(body.park_id), role: body.role },
+      { headers: { Authorization: `Bearer ${req.session.token}`, 'Content-Type': 'application/json' } }
+    );
+    return res.json({ ok: true, ...result.data });
+  } catch (err) {
+    const msg = err.response?.data?.message || 'Assignment failed';
+    return res.status(err.response?.status || 500).json({ message: msg });
+  }
+});
+
 // ── User Management (admin-only) ─────────────────────────────────────────────
 
 router.get('/users', ensureAuth, ensurePortalAccess, async (req, res) => {
@@ -717,6 +806,16 @@ router.post('/users/:id/delete', ensureAuth, ensurePortalAccess, async (req, res
     const msg = err.response?.data?.message || 'Failed to delete user';
     res.redirect(`/dashboard/users?error=${encodeURIComponent(msg)}`);
   }
+});
+
+router.get('/settings', ensureAuth, ensurePortalAccess, async (req, res) => {
+  return res.render('settings', {
+    user: req.session.user,
+    section: 'settings',
+    topbarDateRange: '',
+    showFiltersButton: false,
+    notificationCount: 0
+  });
 });
 
 router.post('/change-password', ensureAuth, async (req, res) => {

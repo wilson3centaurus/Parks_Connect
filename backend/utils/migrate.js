@@ -286,6 +286,31 @@ const dataMaintenanceStatements = [
   `CREATE INDEX IF NOT EXISTS idx_alerts_alert_status_triggered ON alerts(alert_status, triggered_at);`
 ];
 
+async function seedZimbabweParks(db) {
+  const parks = [
+    { name: 'Hwange National Park',          code: 'HWG', region: 'Matabeleland North',  cap: 800  },
+    { name: 'Victoria Falls National Park',   code: 'VFA', region: 'Matabeleland North',  cap: 2000 },
+    { name: 'Mana Pools National Park',       code: 'MNA', region: 'Mashonaland West',    cap: 400  },
+    { name: 'Gonarezhou National Park',       code: 'GNZ', region: 'Masvingo',            cap: 300  },
+    { name: 'Matobo National Park',           code: 'MTB', region: 'Matabeleland South',  cap: 600  },
+    { name: 'Nyanga National Park',           code: 'NYG', region: 'Manicaland',          cap: 500  },
+    { name: 'Chimanimani National Park',      code: 'CHM', region: 'Manicaland',          cap: 200  },
+    { name: 'Chizarira National Park',        code: 'CHZ', region: 'Matabeleland North',  cap: 150  },
+    { name: 'Matusadona National Park',       code: 'MTS', region: 'Mashonaland West',    cap: 250  },
+    { name: 'Zambezi National Park',          code: 'ZMB', region: 'Matabeleland North',  cap: 400  },
+    { name: 'Kazuma Pan National Park',       code: 'KZM', region: 'Matabeleland North',  cap: 100  },
+  ];
+  for (const p of parks) {
+    const existing = await db.get(`SELECT id FROM parks WHERE code = ?`, [p.code]);
+    if (!existing) {
+      await db.run(
+        `INSERT INTO parks (name, code, region, daily_capacity_limit) VALUES (?, ?, ?, ?)`,
+        [p.name, p.code, p.region, p.cap]
+      );
+    }
+  }
+}
+
 async function seedDefaultThresholds(db) {
   const thresholds = [
     { metric: 'visitors', threshold: 500, comparator: '>' },
@@ -391,6 +416,7 @@ BEGIN
   END LOOP;
 END $$`);
 
+  await seedZimbabweParks(db);
   await seedDefaultThresholds(db);
 }
 

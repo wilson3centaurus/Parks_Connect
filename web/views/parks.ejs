@@ -1,0 +1,619 @@
+<%
+const dbParks = locals.parks || [];
+const allUsers = locals.allUsers || [];
+const isAdmin = locals.user && locals.user.role === 'authority_admin';
+
+// Hardcoded coords + metadata for Zimbabwe national parks
+const PARK_META = {
+  'HWG': { lat: -18.61, lng: 26.74, area: '14,651 km²', desc: "Zimbabwe's largest park, famous for its vast elephant herds and diverse wildlife." },
+  'VFA': { lat: -17.92, lng: 25.83, area: '23 km²',     desc: 'UNESCO World Heritage Site encompassing the iconic Victoria Falls on the Zambezi River.' },
+  'MNA': { lat: -15.77, lng: 29.38, area: '2,196 km²',  desc: 'UNESCO World Heritage Site renowned for walking safaris and canoe trails along the Zambezi.' },
+  'GNZ': { lat: -21.40, lng: 31.80, area: '5,053 km²',  desc: 'Part of the Great Limpopo Transfrontier Park, known for red sandstone cliffs and rare wildlife.' },
+  'MTB': { lat: -20.52, lng: 28.48, area: '424 km²',    desc: 'Dramatic granite boulder formations, San rock paintings, and white rhino tracking.' },
+  'NYG': { lat: -18.22, lng: 32.75, area: '473 km²',    desc: 'Zimbabwe\'s Eastern Highlands scenery, highest peak at Mt. Nyangani (2,592 m).' },
+  'CHM': { lat: -19.78, lng: 32.88, area: '171 km²',    desc: 'Rugged mountain wilderness on the Mozambique border with exceptional hiking trails.' },
+  'CHZ': { lat: -17.70, lng: 27.88, area: '1,920 km²',  desc: 'Remote wilderness in northwest Zimbabwe, excellent for off-the-beaten-path experiences.' },
+  'MTS': { lat: -16.88, lng: 28.66, area: '1,400 km²',  desc: 'Situated on Lake Kariba\'s shores, famous for water-based safaris and fishing.' },
+  'ZMB': { lat: -17.91, lng: 25.52, area: '56 km²',     desc: 'Borders Victoria Falls along the Zambezi, prime game viewing and river activities.' },
+  'KZM': { lat: -18.32, lng: 25.86, area: '313 km²',    desc: 'Remote pan ecosystem near the Botswana border, haven for large herds of grazing animals.' }
+};
+
+const roleLabel = { authority_admin: 'HQ Admin', environment_officer: 'Park Manager', tourism_operator: 'Reception' };
+%>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<section class="zim-page-header mb-3">
+  <div>
+    <h1>National Parks</h1>
+    <p>Zimbabwe's Protected Conservation Areas &mdash; <%= dbParks.length %> parks in system</p>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="badge bg-success"><%= dbParks.reduce((s,p) => s + Number(p.visitorStats?.total_visitors || 0), 0).toLocaleString() %> total visitors</span>
+    <span class="badge" style="background:var(--zp-amber);color:#000"><%= dbParks.reduce((s,p) => s + (p.officers?.length || 0), 0) %> officers assigned</span>
+  </div>
+</section>
+
+<div class="parks-layout" id="parksLayout">
+
+  <!-- ── Left Panel ─────────────────────────────────────────────── -->
+  <div class="parks-panel" id="parksPanel">
+    <div class="parks-search-wrap">
+      <i class="fa-solid fa-magnifying-glass parks-search-icon"></i>
+      <input type="text" class="parks-search-input" id="parkSearch" placeholder="Search parks…">
+    </div>
+
+    <div class="parks-list" id="parksList">
+      <% for (const park of dbParks) {
+           const meta = PARK_META[park.code] || {};
+           const visitors = Number(park.visitorStats?.total_visitors || 0);
+           const officerCount = park.officers?.length || 0;
+      %>
+      <div class="park-card" data-park-id="<%= park.id %>" data-park-name="<%= park.name.toLowerCase() %>">
+        <div class="park-card-header">
+          <div class="park-card-icon">
+            <i class="fa-solid fa-tree"></i>
+          </div>
+          <div class="park-card-info">
+            <strong class="park-card-name"><%= park.name %></strong>
+            <span class="park-card-region"><i class="fa-solid fa-location-dot"></i> <%= park.region || 'Zimbabwe' %></span>
+          </div>
+          <i class="fa-solid fa-chevron-right park-card-arrow"></i>
+        </div>
+        <div class="park-card-stats">
+          <span><i class="fa-solid fa-users"></i> <%= visitors.toLocaleString() %></span>
+          <span><i class="fa-solid fa-user-shield"></i> <%= officerCount %> officers</span>
+          <% if (park.daily_capacity_limit) { %>
+          <span><i class="fa-solid fa-gauge"></i> Cap <%= Number(park.daily_capacity_limit).toLocaleString() %>/day</span>
+          <% } %>
+        </div>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- ── Detail View (hidden by default) ───────────────────────── -->
+    <div class="parks-detail" id="parksDetail" style="display:none">
+      <button class="parks-detail-back" id="detailBack">
+        <i class="fa-solid fa-arrow-left"></i> All Parks
+      </button>
+      <div id="detailContent"></div>
+    </div>
+  </div>
+
+  <!-- Assign Officer Modal -->
+  <div id="assignModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:1rem">
+    <div style="background:var(--zp-white);border:1px solid var(--zp-border);border-radius:14px;padding:1.75rem;width:100%;max-width:400px;box-shadow:0 12px 40px rgba(0,0,0,0.2)">
+      <h4 style="font-size:1rem;font-weight:700;color:var(--zp-text);margin-bottom:0.3rem">Assign Officer</h4>
+      <p id="assignModalDesc" style="font-size:0.82rem;color:var(--zp-muted);margin-bottom:1.25rem"></p>
+      <input type="hidden" id="assignParkId">
+      <div style="margin-bottom:1rem">
+        <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--zp-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.35rem">Staff Member</label>
+        <select id="assignUserId" style="width:100%;padding:0.55rem 0.85rem;border-radius:8px;border:1px solid var(--zp-border);background:var(--zp-surface);color:var(--zp-text);font-size:0.875rem;font-family:inherit">
+          <option value="">— Select staff member —</option>
+          <% allUsers.forEach(function(u) { %>
+            <option value="<%= u.id %>" data-role="<%= u.role %>"><%= u.name %> (<%= u.role.replace(/_/g,' ') %>)</option>
+          <% }); %>
+        </select>
+      </div>
+      <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+        <button onclick="closeAssignModal()" style="padding:0.5rem 1.25rem;border-radius:8px;border:1px solid var(--zp-border);background:transparent;color:var(--zp-muted);font-size:0.875rem;cursor:pointer;font-family:inherit">Cancel</button>
+        <button onclick="submitAssign()" style="padding:0.5rem 1.25rem;border-radius:8px;border:none;background:var(--zp-green);color:#fff;font-size:0.875rem;font-weight:700;cursor:pointer;font-family:inherit">Assign</button>
+      </div>
+      <p id="assignError" style="display:none;margin-top:0.75rem;font-size:0.82rem;color:var(--zp-red)"></p>
+    </div>
+  </div>
+
+  <!-- ── Map ───────────────────────────────────────────────────── -->
+  <div class="parks-map-container" id="parksMap"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  // ── Data ──────────────────────────────────────────────────────────
+  const IS_ADMIN = <%- JSON.stringify(isAdmin) %>;
+  const DB_PARKS = <%- JSON.stringify(dbParks) %>;
+
+  const PARK_META = <%- JSON.stringify(PARK_META) %>;
+
+  const ALL_PARKS = Object.entries(PARK_META).map(([code, meta]) => {
+    const db = DB_PARKS.find(p => p.code === code) || null;
+    return {
+      id: db?.id || null,
+      code,
+      name: db?.name || code,
+      region: db?.region || 'Zimbabwe',
+      area: meta.area,
+      desc: meta.desc,
+      lat: meta.lat,
+      lng: meta.lng,
+      officers: db?.officers || [],
+      visitorStats: db?.visitorStats || {},
+      recentLogs: db?.recentLogs || [],
+      daily_capacity_limit: db?.daily_capacity_limit || null,
+      inSystem: !!db
+    };
+  });
+
+  // ── Map ───────────────────────────────────────────────────────────
+  const map = L.map('parksMap', { center: [-19.2, 29.8], zoom: 6, zoomControl: true });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18
+  }).addTo(map);
+
+  const markers = {};
+
+  function makeParkIcon(inSystem, active) {
+    const bg = active ? '#1D9E75' : (inSystem ? '#085041' : '#6B7280');
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        width:38px;height:38px;border-radius:50%;
+        background:${bg};border:3px solid #fff;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 2px 8px rgba(0,0,0,0.3);
+        transition:all 0.2s;cursor:pointer;
+      "><i class="fa-solid fa-tree" style="color:#fff;font-size:14px"></i></div>`,
+      iconSize: [38, 38],
+      iconAnchor: [19, 19],
+      popupAnchor: [0, -22]
+    });
+  }
+
+  ALL_PARKS.forEach(park => {
+    const marker = L.marker([park.lat, park.lng], { icon: makeParkIcon(park.inSystem, false) })
+      .addTo(map)
+      .bindPopup(`
+        <div style="min-width:180px;font-family:'DM Sans',sans-serif">
+          <strong style="font-size:13px">${park.name}</strong><br>
+          <span style="font-size:11px;color:#6B7280">${park.region}</span><br>
+          <span style="font-size:11px"><i class="fa-solid fa-expand" style="color:#1D9E75"></i> ${park.area}</span><br>
+          ${park.inSystem
+            ? `<span style="font-size:11px"><i class="fa-solid fa-users" style="color:#1D9E75"></i> ${Number(park.visitorStats?.total_visitors || 0).toLocaleString()} visitors</span>`
+            : `<span style="font-size:11px;color:#6B7280">Not yet in system</span>`}
+          <br><button onclick="selectPark('${park.code}')" style="
+            margin-top:6px;padding:4px 12px;border:none;border-radius:6px;
+            background:#1D9E75;color:#fff;font-size:12px;cursor:pointer;width:100%
+          ">View Details</button>
+        </div>
+      `);
+    markers[park.code] = { marker, park };
+    marker.on('click', () => selectPark(park.code));
+  });
+
+  // ── Park selection ────────────────────────────────────────────────
+  let activeCode = null;
+
+  window.selectPark = function(code) {
+    const entry = markers[code];
+    if (!entry) return;
+    const park = entry.park;
+
+    // Reset previous
+    if (activeCode && markers[activeCode]) {
+      markers[activeCode].marker.setIcon(makeParkIcon(markers[activeCode].park.inSystem, false));
+    }
+    activeCode = code;
+    entry.marker.setIcon(makeParkIcon(park.inSystem, true));
+
+    map.flyTo([park.lat, park.lng], 9, { animate: true, duration: 1 });
+    entry.marker.openPopup();
+
+    // Highlight list card
+    document.querySelectorAll('.park-card').forEach(c => c.classList.remove('park-card--active'));
+    const card = document.querySelector(`.park-card[data-park-id="${park.id}"]`);
+    if (card) {
+      card.classList.add('park-card--active');
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    showDetail(park);
+  };
+
+  function showDetail(park) {
+    const v = park.visitorStats;
+    const officerRows = park.officers.length
+      ? park.officers.map(o => `
+          <div class="detail-officer">
+            <div class="detail-officer-avatar">${o.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()}</div>
+            <div>
+              <strong>${o.name}</strong>
+              <span>${{ authority_admin:'HQ Admin', environment_officer:'Park Officer', tourism_operator:'Reception' }[o.role] || o.role}</span>
+              <small>${o.email}</small>
+            </div>
+          </div>`).join('')
+      : '<p style="color:var(--zp-muted);font-size:13px;padding:8px 0">No officers assigned yet</p>';
+
+    const recentRows = park.recentLogs.length
+      ? park.recentLogs.map(l => `
+          <div class="detail-log-row">
+            <span>${l.log_date || '—'}</span>
+            <span>${Number(l.visitors_count || 0).toLocaleString()} visitors</span>
+            <span style="color:var(--zp-muted)">${Number(l.local_visitors||0)} local / ${Number(l.international_visitors||0)} intl</span>
+          </div>`).join('')
+      : '<p style="color:var(--zp-muted);font-size:13px">No visitor logs yet</p>';
+
+    document.getElementById('detailContent').innerHTML = `
+      <div class="detail-header">
+        <div class="detail-park-icon"><i class="fa-solid fa-tree"></i></div>
+        <div>
+          <h3>${park.name}</h3>
+          <span><i class="fa-solid fa-location-dot"></i> ${park.region}</span>
+        </div>
+      </div>
+
+      <p class="detail-desc">${park.desc}</p>
+
+      <div class="detail-kpis">
+        <div class="detail-kpi">
+          <i class="fa-solid fa-users"></i>
+          <span>${Number(v.total_visitors || 0).toLocaleString()}</span>
+          <label>Total Visitors</label>
+        </div>
+        <div class="detail-kpi">
+          <i class="fa-solid fa-earth-africa"></i>
+          <span>${Number(v.international_visitors || 0).toLocaleString()}</span>
+          <label>International</label>
+        </div>
+        <div class="detail-kpi">
+          <i class="fa-solid fa-user-shield"></i>
+          <span>${park.officers.length}</span>
+          <label>Officers</label>
+        </div>
+        <div class="detail-kpi">
+          <i class="fa-solid fa-expand"></i>
+          <span>${park.area}</span>
+          <label>Area</label>
+        </div>
+      </div>
+
+      ${park.daily_capacity_limit ? `
+      <div class="detail-section">
+        <label>Daily Capacity</label>
+        <p>${Number(park.daily_capacity_limit).toLocaleString()} visitors/day</p>
+      </div>` : ''}
+
+      ${v.last_visit_date ? `
+      <div class="detail-section">
+        <label>Last Visitor Log</label>
+        <p>${v.last_visit_date}</p>
+      </div>` : ''}
+
+      <div class="detail-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <label style="margin:0">Assigned Officers (${park.officers.length})</label>
+          ${IS_ADMIN && park.id ? `<button onclick="openAssignModal(${park.id}, '${park.name.replace(/'/g,"\\'")}', ${JSON.stringify(park.officers.map(o=>o.id))})" style="padding:3px 10px;border-radius:6px;border:1px solid var(--zp-green);background:transparent;color:var(--zp-green);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit"><i class="fa-solid fa-plus"></i> Assign</button>` : ''}
+        </div>
+        <div class="detail-officers">${officerRows}</div>
+      </div>
+
+      <div class="detail-section">
+        <label>Recent Visitor Logs</label>
+        <div class="detail-logs">${recentRows}</div>
+      </div>
+    `;
+
+    document.getElementById('parksList').style.display = 'none';
+    document.getElementById('parksDetail').style.display = 'flex';
+  }
+
+  document.getElementById('detailBack').addEventListener('click', () => {
+    document.getElementById('parksDetail').style.display = 'none';
+    document.getElementById('parksList').style.display = 'block';
+    if (activeCode && markers[activeCode]) {
+      markers[activeCode].marker.setIcon(makeParkIcon(markers[activeCode].park.inSystem, false));
+    }
+    activeCode = null;
+    document.querySelectorAll('.park-card').forEach(c => c.classList.remove('park-card--active'));
+    map.flyTo([-19.2, 29.8], 6, { animate: true, duration: 0.8 });
+  });
+
+  // ── Card clicks ───────────────────────────────────────────────────
+  document.querySelectorAll('.park-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const parkId = Number(card.dataset.parkId);
+      const db = DB_PARKS.find(p => p.id === parkId);
+      if (db) selectPark(db.code);
+    });
+  });
+
+  // ── Search ────────────────────────────────────────────────────────
+  document.getElementById('parkSearch').addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.park-card').forEach(card => {
+      card.style.display = card.dataset.parkName.includes(q) ? '' : 'none';
+    });
+  });
+
+  // ── Resize map on panel toggle ────────────────────────────────────
+  setTimeout(() => map.invalidateSize(), 300);
+
+  // ── Assign Officer Modal ──────────────────────────────────────────
+  let _assignParkId = null;
+
+  window.openAssignModal = function(parkId, parkName, assignedIds) {
+    _assignParkId = parkId;
+    document.getElementById('assignParkId').value = parkId;
+    document.getElementById('assignModalDesc').textContent = 'Add a staff member to ' + parkName;
+    document.getElementById('assignError').style.display = 'none';
+
+    // Hide already-assigned users
+    document.querySelectorAll('#assignUserId option').forEach(opt => {
+      if (opt.value) opt.style.display = assignedIds.includes(Number(opt.value)) ? 'none' : '';
+    });
+    document.getElementById('assignUserId').value = '';
+
+    const modal = document.getElementById('assignModal');
+    modal.style.display = 'flex';
+  };
+
+  window.closeAssignModal = function() {
+    document.getElementById('assignModal').style.display = 'none';
+    _assignParkId = null;
+  };
+
+  document.getElementById('assignModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAssignModal();
+  });
+
+  window.submitAssign = async function() {
+    const userId = document.getElementById('assignUserId').value;
+    const errEl = document.getElementById('assignError');
+    if (!userId) { errEl.textContent = 'Please select a staff member.'; errEl.style.display = 'block'; return; }
+
+    const opt = document.querySelector(`#assignUserId option[value="${userId}"]`);
+    const role = opt?.dataset?.role || 'environment_officer';
+
+    try {
+      const resp = await fetch('/dashboard/parks/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ user_id: userId, park_id: _assignParkId, role })
+      });
+      const data = await resp.json();
+      if (!resp.ok) { errEl.textContent = data.message || 'Failed'; errEl.style.display = 'block'; return; }
+      closeAssignModal();
+      // Reload page to show updated officers
+      window.location.reload();
+    } catch {
+      errEl.textContent = 'Network error. Please try again.';
+      errEl.style.display = 'block';
+    }
+  };
+})();
+</script>
+
+<style>
+.parks-layout {
+  display: flex;
+  gap: 0;
+  height: calc(100vh - 160px);
+  min-height: 500px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+}
+
+.parks-panel {
+  width: 330px;
+  min-width: 280px;
+  background: var(--zp-white);
+  border-right: 1px solid var(--zp-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.parks-search-wrap {
+  position: relative;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--zp-border);
+}
+
+.parks-search-icon {
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--zp-muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.parks-search-input {
+  width: 100%;
+  padding: 8px 10px 8px 32px;
+  border: 1px solid var(--zp-border);
+  border-radius: 8px;
+  font-size: 13px;
+  background: var(--zp-surface);
+  color: var(--zp-text);
+  outline: none;
+}
+.parks-search-input:focus { border-color: var(--zp-green); }
+
+.parks-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.park-card {
+  border: 1px solid var(--zp-border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.park-card:hover { border-color: var(--zp-green); background: var(--zp-green-light); }
+.park-card--active { border-color: var(--zp-green); background: var(--zp-green-light); box-shadow: 0 0 0 2px rgba(29,158,117,0.2); }
+
+.park-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.park-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--zp-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.park-card-info { flex: 1; min-width: 0; }
+.park-card-name { display: block; font-size: 13px; font-weight: 600; color: var(--zp-text); line-height: 1.3; }
+.park-card-region { font-size: 11px; color: var(--zp-muted); }
+.park-card-region i { font-size: 10px; }
+
+.park-card-arrow { color: var(--zp-muted); font-size: 11px; flex-shrink: 0; }
+.park-card:hover .park-card-arrow { color: var(--zp-green); }
+
+.park-card-stats {
+  display: flex;
+  gap: 10px;
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--zp-muted);
+}
+.park-card-stats i { color: var(--zp-green); margin-right: 3px; }
+
+/* ── Detail View ─────────────────────────────────────────────────── */
+.parks-detail {
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 0;
+  height: 100%;
+}
+
+.parks-detail-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: var(--zp-green);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid var(--zp-border);
+  width: 100%;
+  text-align: left;
+}
+.parks-detail-back:hover { background: var(--zp-green-light); }
+
+#detailContent { padding: 12px 14px; }
+
+.detail-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.detail-park-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--zp-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.detail-header h3 { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.3; }
+.detail-header span { font-size: 12px; color: var(--zp-muted); }
+
+.detail-desc { font-size: 12px; color: var(--zp-muted); line-height: 1.5; margin-bottom: 12px; }
+
+.detail-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.detail-kpi {
+  background: var(--zp-surface);
+  border: 1px solid var(--zp-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detail-kpi i { color: var(--zp-green); font-size: 13px; }
+.detail-kpi span { font-size: 15px; font-weight: 700; color: var(--zp-text); }
+.detail-kpi label { font-size: 10px; color: var(--zp-muted); }
+
+.detail-section { margin-bottom: 14px; }
+.detail-section > label { font-size: 11px; font-weight: 700; color: var(--zp-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+.detail-section > p { font-size: 13px; color: var(--zp-text); margin: 0; }
+
+.detail-officers { display: flex; flex-direction: column; gap: 6px; }
+.detail-officer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--zp-surface);
+  border-radius: 7px;
+  border: 1px solid var(--zp-border);
+}
+.detail-officer-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--zp-green-dark);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.detail-officer > div { display: flex; flex-direction: column; }
+.detail-officer strong { font-size: 12px; color: var(--zp-text); }
+.detail-officer span { font-size: 10px; color: var(--zp-green); }
+.detail-officer small { font-size: 10px; color: var(--zp-muted); }
+
+.detail-logs { display: flex; flex-direction: column; gap: 4px; }
+.detail-log-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px;
+  background: var(--zp-surface);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--zp-text);
+}
+
+.parks-map-container {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+#parksMap {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .parks-layout { flex-direction: column; height: auto; }
+  .parks-panel { width: 100%; height: 280px; }
+  .parks-map-container { height: 350px; }
+}
+</style>

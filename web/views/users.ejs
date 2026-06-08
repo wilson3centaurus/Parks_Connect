@@ -1,71 +1,89 @@
 <% /* User management — authority_admin only */ %>
 <style>
-  .um-page { padding: 2rem; max-width: 1100px; }
+  .um-page { max-width: 1100px; }
   .um-header { margin-bottom: 2rem; }
-  .um-header h2 { font-size: 1.5rem; font-weight: 700; color: var(--zim-text, #fff); margin-bottom: 0.25rem; }
-  .um-header p { font-size: 0.875rem; color: var(--zim-text-muted, rgba(255,255,255,0.5)); }
+  .um-header h2 { font-size: 1.5rem; font-weight: 700; color: var(--zp-text); margin-bottom: 0.25rem; }
+  .um-header p { font-size: 0.875rem; color: var(--zp-muted); }
   .um-notice { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem; }
-  .um-notice.success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); color: #22c55e; }
-  .um-notice.error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #f87171; }
+  .um-notice.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #16a34a; }
+  .um-notice.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #dc2626; }
 
-  /* Create user card */
-  .um-create-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.75rem; margin-bottom: 2rem; }
-  .um-create-card h3 { font-size: 1rem; font-weight: 700; color: var(--zim-text, #fff); margin-bottom: 1.25rem; }
+  /* Create card */
+  .um-create-card {
+    background: var(--zp-white); border: 1px solid var(--zp-border);
+    border-radius: 14px; padding: 1.75rem; margin-bottom: 2rem;
+    box-shadow: var(--zp-soft-shadow);
+  }
+  .um-create-card h3 { font-size: 1rem; font-weight: 700; color: var(--zp-text); margin-bottom: 1.25rem; }
   .um-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-  .um-field label { display: block; font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem; }
-  .um-field input, .um-field select { width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: #fff; font-size: 0.875rem; }
-  .um-field input::placeholder { color: rgba(255,255,255,0.3); }
-  .um-field select option { background: #1e293b; }
-  .um-field-note { font-size: 0.72rem; color: rgba(255,255,255,0.35); margin-top: 0.3rem; }
-  .btn-create { padding: 0.6rem 1.5rem; border-radius: 8px; background: #22c55e; color: #fff; border: none; font-size: 0.875rem; font-weight: 700; cursor: pointer; }
-  .btn-create:hover { background: #16a34a; }
+  .um-field label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--zp-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem; }
+  .um-field input, .um-field select {
+    width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px;
+    border: 1px solid var(--zp-border); background: var(--zp-surface);
+    color: var(--zp-text); font-size: 0.875rem; font-family: inherit;
+  }
+  .um-field input:focus, .um-field select:focus { outline: none; border-color: var(--zp-green); box-shadow: 0 0 0 3px rgba(29,158,117,0.12); }
+  .um-field input::placeholder { color: var(--zp-muted); opacity: 0.7; }
+  .um-field-note { font-size: 0.72rem; color: var(--zp-muted); margin-top: 0.3rem; }
+  .btn-create { padding: 0.6rem 1.5rem; border-radius: 8px; background: var(--zp-green); color: #fff; border: none; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+  .btn-create:hover { background: var(--zp-green-dark); }
 
   /* Users table */
-  .um-table-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; }
-  .um-table-head { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
-  .um-table-head h3 { font-size: 1rem; font-weight: 700; color: #fff; margin: 0; }
-  .um-count { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
-  table { width: 100%; border-collapse: collapse; }
-  th { padding: 0.65rem 1.25rem; text-align: left; font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.07); }
-  td { padding: 0.85rem 1.25rem; font-size: 0.875rem; color: rgba(255,255,255,0.85); border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,0.025); }
-  .role-badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-  .role-badge.authority_admin { background: rgba(168,85,247,0.2); color: #c084fc; }
-  .role-badge.environment_officer { background: rgba(34,197,94,0.15); color: #4ade80; }
-  .role-badge.tourism_operator { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .um-table-card {
+    background: var(--zp-white); border: 1px solid var(--zp-border);
+    border-radius: 14px; overflow: hidden; box-shadow: var(--zp-soft-shadow);
+  }
+  .um-table-head { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--zp-border); }
+  .um-table-head h3 { font-size: 1rem; font-weight: 700; color: var(--zp-text); margin: 0; }
+  .um-count { font-size: 0.75rem; color: var(--zp-muted); background: var(--zp-surface); padding: 0.2rem 0.6rem; border-radius: 6px; }
+  .um-page table { width: 100%; border-collapse: collapse; }
+  .um-page th { padding: 0.6rem 1.25rem; text-align: left; font-size: 0.7rem; font-weight: 700; color: var(--zp-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--zp-border); background: var(--zp-surface); }
+  .um-page td { padding: 0.85rem 1.25rem; font-size: 0.875rem; color: var(--zp-text); border-bottom: 1px solid var(--zp-border); vertical-align: middle; }
+  .um-page tr:last-child td { border-bottom: none; }
+  .um-page tr:hover td { background: var(--zp-green-light); }
+  .um-cell-muted { color: var(--zp-muted) !important; font-size: 0.82rem; }
+  .um-empty { padding: 2rem 1.5rem; color: var(--zp-muted); font-size: 0.875rem; }
+
+  .role-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+  .role-badge.authority_admin { background: rgba(124,58,237,0.1); color: #7c3aed; border: 1px solid rgba(124,58,237,0.2); }
+  .role-badge.environment_officer { background: rgba(29,158,117,0.1); color: var(--zp-green-dark); border: 1px solid rgba(29,158,117,0.2); }
+  .role-badge.tourism_operator { background: rgba(59,130,246,0.1); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.2); }
 
   /* Action buttons */
   .um-actions { display: flex; gap: 0.5rem; align-items: center; }
-  .btn-reset, .btn-delete { padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; border: none; cursor: pointer; }
-  .btn-reset { background: rgba(59,130,246,0.15); color: #60a5fa; }
-  .btn-reset:hover { background: rgba(59,130,246,0.3); }
-  .btn-delete { background: rgba(239,68,68,0.12); color: #f87171; }
-  .btn-delete:hover { background: rgba(239,68,68,0.25); }
+  .btn-reset, .btn-delete { padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .btn-reset { background: rgba(59,130,246,0.08); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.2); }
+  .btn-reset:hover { background: rgba(59,130,246,0.18); }
+  .btn-delete { background: rgba(239,68,68,0.08); color: #dc2626; border: 1px solid rgba(239,68,68,0.2); }
+  .btn-delete:hover { background: rgba(239,68,68,0.18); }
 
-  /* Reset modal */
-  .um-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+  /* Modal */
+  .um-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
   .um-modal-overlay.open { display: flex; }
-  .um-modal { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 2rem; width: 100%; max-width: 420px; }
-  .um-modal h4 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
-  .um-modal p { font-size: 0.825rem; color: rgba(255,255,255,0.5); margin-bottom: 1.25rem; }
+  .um-modal { background: var(--zp-white); border: 1px solid var(--zp-border); border-radius: 14px; padding: 2rem; width: 100%; max-width: 420px; box-shadow: 0 12px 40px rgba(0,0,0,0.18); }
+  .um-modal h4 { font-size: 1rem; font-weight: 700; color: var(--zp-text); margin-bottom: 0.4rem; }
+  .um-modal p { font-size: 0.825rem; color: var(--zp-muted); margin-bottom: 1.25rem; }
   .um-modal .um-field { margin-bottom: 1rem; }
   .um-modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
-  .btn-cancel { padding: 0.5rem 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.7); font-size: 0.875rem; cursor: pointer; }
-  .btn-confirm { padding: 0.5rem 1.25rem; border-radius: 8px; border: none; background: #22c55e; color: #fff; font-size: 0.875rem; font-weight: 700; cursor: pointer; }
+  .btn-cancel { padding: 0.5rem 1.25rem; border-radius: 8px; border: 1px solid var(--zp-border); background: transparent; color: var(--zp-muted); font-size: 0.875rem; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+  .btn-cancel:hover { background: var(--zp-surface); color: var(--zp-text); }
+  .btn-confirm { padding: 0.5rem 1.25rem; border-radius: 8px; border: none; background: var(--zp-green); color: #fff; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+  .btn-confirm:hover { background: var(--zp-green-dark); }
 </style>
 
-<div class="um-page">
+<section class="zim-page-header mb-4">
   <div class="um-header">
     <h2>User Management</h2>
     <p>Create staff accounts and manage access for environment officers and tourism operators.</p>
   </div>
+</section>
 
-  <% if (success) { %>
-    <div class="um-notice success"><i class="fa-solid fa-check-circle"></i> <%= success %></div>
+<div class="um-page">
+  <% if (locals.success) { %>
+    <div class="um-notice success"><i class="fa-solid fa-check-circle"></i> <%= locals.success %></div>
   <% } %>
-  <% if (error) { %>
-    <div class="um-notice error"><i class="fa-solid fa-circle-exclamation"></i> <%= error %></div>
+  <% if (locals.error) { %>
+    <div class="um-notice error"><i class="fa-solid fa-circle-exclamation"></i> <%= locals.error %></div>
   <% } %>
 
   <!-- Create account -->
@@ -114,10 +132,10 @@
   <div class="um-table-card">
     <div class="um-table-head">
       <h3>Staff Accounts</h3>
-      <span class="um-count"><%= users ? users.length : 0 %> accounts</span>
+      <span class="um-count"><%= locals.users ? locals.users.length : 0 %> accounts</span>
     </div>
-    <% if (!users || users.length === 0) { %>
-      <p style="padding: 2rem 1.5rem; color: rgba(255,255,255,0.4); font-size: 0.875rem;">No staff accounts yet. Create the first one above.</p>
+    <% if (!locals.users || locals.users.length === 0) { %>
+      <p class="um-empty">No staff accounts yet. Create the first one above.</p>
     <% } else { %>
     <table>
       <thead>
@@ -131,17 +149,17 @@
         </tr>
       </thead>
       <tbody>
-        <% users.forEach(function(u) { %>
+        <% locals.users.forEach(function(u) { %>
           <tr>
             <td><strong><%= u.name %></strong></td>
-            <td style="color: rgba(255,255,255,0.55);"><%= u.email %></td>
+            <td class="um-cell-muted"><%= u.email %></td>
             <td><span class="role-badge <%= u.role %>"><%= u.role.replace(/_/g, ' ') %></span></td>
-            <td style="color: rgba(255,255,255,0.55);"><%- u.park_name || '<span style="color:rgba(255,255,255,0.25)">All parks</span>' %></td>
-            <td style="color: rgba(255,255,255,0.4); font-size: 0.8rem;"><%= u.created_at ? new Date(u.created_at).toLocaleDateString('en-ZW', { dateStyle: 'medium' }) : '—' %></td>
+            <td class="um-cell-muted"><%- u.park_name || '<span style="opacity:0.45">All parks</span>' %></td>
+            <td class="um-cell-muted"><%= u.created_at ? new Date(u.created_at).toLocaleDateString('en-ZW', { dateStyle: 'medium' }) : '—' %></td>
             <td>
               <div class="um-actions">
                 <button class="btn-reset" onclick="openResetModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>')">Reset PW</button>
-                <form action="/dashboard/users/<%= u.id %>/delete" method="POST" onsubmit="return confirm('Remove <%= u.name %>? This cannot be undone.')">
+                <form action="/dashboard/users/<%= u.id %>/delete" method="POST" style="margin:0" onsubmit="return confirm('Remove <%= u.name %>? This cannot be undone.')">
                   <button type="submit" class="btn-delete">Remove</button>
                 </form>
               </div>
@@ -173,9 +191,7 @@
 </div>
 
 <script>
-  // Show/hide park select based on role
   var roleSelect = document.getElementById('roleSelect');
-  var parkField = document.getElementById('parkField');
   var parkSelect = document.getElementById('parkSelect');
 
   function updateParkRequired() {
@@ -185,7 +201,6 @@
   roleSelect.addEventListener('change', updateParkRequired);
   updateParkRequired();
 
-  // Reset password modal
   function openResetModal(userId, name) {
     document.getElementById('resetModalDesc').textContent = 'Set a new password for ' + name + '.';
     document.getElementById('resetForm').action = '/dashboard/users/' + userId + '/reset-password';

@@ -80,6 +80,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve service worker from root scope
+app.get('/sw.js', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'sw.js')));
+app.get('/manifest.json', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.json')));
+
 app.get('/', async (req, res) => {
   if (req.session?.user) return res.redirect('/dashboard');
   try {

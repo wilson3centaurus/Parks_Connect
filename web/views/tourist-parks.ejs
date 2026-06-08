@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explore Zimbabwe's National Parks — ZimParks</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1D9E75">
+  <meta name="description" content="Explore Zimbabwe's 11 national parks — wildlife, attractions, things to do, and visitor information.">
+  <link rel="apple-touch-icon" href="/public/images/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #0a1628;
+  --navy-mid: #0f2240;
+  --navy-card: #0d1e35;
+  --green: #1D9E75;
+  --green-bright: #22c55e;
+  --amber: #f59e0b;
+  --border: rgba(255,255,255,0.08);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.45);
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; }
+
+/* ── Nav ─────────────────────────────────────────────────────── */
+.tp-nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.9rem 2rem;
+  background: rgba(10,22,40,0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.tp-brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+.tp-brand img { height: 34px; width: 34px; object-fit: contain; border-radius: 50%; }
+.tp-brand-name { font-size: 1rem; font-weight: 700; color: #fff; line-height: 1; }
+.tp-brand-sub { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.05em; }
+.tp-nav-actions { display: flex; gap: 0.6rem; align-items: center; }
+.btn-ghost { padding: 0.45rem 1rem; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 0.82rem; font-weight: 500; transition: all 0.15s; }
+.btn-ghost:hover { color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.04); }
+.btn-primary-sm { padding: 0.45rem 1rem; background: var(--green); border: none; border-radius: 8px; color: #fff; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: background 0.15s; cursor: pointer; }
+.btn-primary-sm:hover { background: #16a34a; }
+
+/* ── Hero ────────────────────────────────────────────────────── */
+.tp-hero {
+  position: relative; overflow: hidden;
+  padding: 5rem 2rem 4rem; text-align: center;
+  background: linear-gradient(160deg, #0a1628 0%, #0d2a1a 50%, #0a1628 100%);
+}
+.tp-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(29,158,117,0.18), transparent);
+  pointer-events: none;
+}
+.tp-hero-badge {
+  display: inline-block; padding: 0.3rem 0.9rem;
+  background: rgba(29,158,117,0.15); border: 1px solid rgba(29,158,117,0.35);
+  border-radius: 20px; font-size: 0.72rem; font-weight: 700;
+  color: var(--green-bright); letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 1.25rem;
+}
+.tp-hero h1 {
+  font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 800;
+  line-height: 1.12; margin-bottom: 1.1rem; color: #fff;
+}
+.tp-hero h1 span { color: var(--green-bright); }
+.tp-hero p { font-size: 1.05rem; color: var(--muted); line-height: 1.7; max-width: 580px; margin: 0 auto 2.25rem; }
+.tp-hero-cta { display: flex; gap: 0.85rem; justify-content: center; flex-wrap: wrap; }
+.btn-hero { padding: 0.85rem 2rem; border-radius: 10px; font-size: 0.95rem; font-weight: 700; text-decoration: none; transition: all 0.18s; display: inline-flex; align-items: center; gap: 0.5rem; }
+.btn-hero--green { background: var(--green); color: #fff; }
+.btn-hero--green:hover { background: #16a34a; transform: translateY(-1px); }
+.btn-hero--outline { border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.85); }
+.btn-hero--outline:hover { border-color: rgba(255,255,255,0.5); color: #fff; background: rgba(255,255,255,0.04); }
+
+/* ── Stats strip ─────────────────────────────────────────────── */
+.tp-stats {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+.tp-stat { flex: 1; min-width: 130px; padding: 1.25rem 1rem; text-align: center; border-right: 1px solid var(--border); }
+.tp-stat:last-child { border-right: none; }
+.tp-stat-val { font-size: 1.6rem; font-weight: 800; color: var(--green-bright); display: block; }
+.tp-stat-lbl { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ── Parks grid ──────────────────────────────────────────────── */
+.tp-section { max-width: 1180px; margin: 0 auto; padding: 3rem 1.5rem; }
+.tp-section-hd { margin-bottom: 2rem; }
+.tp-section-hd h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.3rem; }
+.tp-section-hd p { font-size: 0.875rem; color: var(--muted); }
+
+.tp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
+
+.tp-park-card {
+  position: relative; border-radius: 16px; overflow: hidden;
+  background: var(--navy-card); border: 1px solid var(--border);
+  cursor: pointer; transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
+  display: flex; flex-direction: column;
+}
+.tp-park-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  border-color: rgba(29,158,117,0.4);
+}
+.tp-card-img {
+  height: 180px; position: relative; overflow: hidden;
+  background: linear-gradient(135deg, #0d2a1a, #1a4a2e);
+}
+.tp-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
+.tp-park-card:hover .tp-card-img img { transform: scale(1.06); }
+.tp-card-img-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3rem; color: rgba(29,158,117,0.4);
+}
+.tp-card-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 30%, rgba(10,22,40,0.8) 100%);
+}
+.tp-card-badge {
+  position: absolute; top: 12px; left: 12px;
+  padding: 0.2rem 0.55rem; background: rgba(29,158,117,0.9);
+  border-radius: 6px; font-size: 0.68rem; font-weight: 700;
+  color: #fff; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.tp-card-body { padding: 1.1rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
+.tp-card-name { font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem; }
+.tp-card-region { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.75rem; }
+.tp-card-region i { color: var(--green); font-size: 0.7rem; margin-right: 3px; }
+.tp-card-extract {
+  font-size: 0.82rem; color: rgba(255,255,255,0.6); line-height: 1.55;
+  flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  margin-bottom: 1rem;
+}
+.tp-card-facts {
+  display: flex; gap: 1rem; font-size: 0.75rem; color: var(--muted);
+  border-top: 1px solid var(--border); padding-top: 0.85rem; margin-bottom: 0.85rem; flex-wrap: wrap;
+}
+.tp-card-facts span { display: flex; align-items: center; gap: 4px; }
+.tp-card-facts i { color: var(--green); }
+.tp-card-animals { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 1rem; }
+.tp-animal-pill {
+  padding: 0.18rem 0.55rem; background: rgba(29,158,117,0.1);
+  border: 1px solid rgba(29,158,117,0.2); border-radius: 20px;
+  font-size: 0.68rem; color: var(--green-bright);
+}
+.tp-card-btn {
+  width: 100%; padding: 0.65rem; background: var(--green); color: #fff;
+  border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.tp-card-btn:hover { background: #16a34a; }
+
+/* ── Map section ─────────────────────────────────────────────── */
+.tp-map-section { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem 3rem; }
+.tp-map-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; }
+.tp-map-section p { font-size: 0.875rem; color: var(--muted); margin-bottom: 1.25rem; }
+#touristMap { width: 100%; height: 420px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+
+/* ── Drawer ──────────────────────────────────────────────────── */
+.tp-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65); z-index: 90;
+  backdrop-filter: blur(4px);
+}
+.tp-backdrop.open { display: block; }
+
+.tp-drawer {
+  position: fixed; top: 0; right: -100%;
+  width: min(560px, 100vw); height: 100vh;
+  background: var(--navy-mid); border-left: 1px solid var(--border);
+  z-index: 100; overflow-y: auto;
+  transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex; flex-direction: column;
+}
+.tp-drawer.open { right: 0; }
+.tp-drawer-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.08); border: none;
+  color: var(--muted); font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.tp-drawer-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.tp-drawer-img { width: 100%; height: 240px; object-fit: cover; display: block; flex-shrink: 0; }
+.tp-drawer-img-fallback {
+  width: 100%; height: 240px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0d2a1a, #1a4a2e); font-size: 5rem;
+  color: rgba(29,158,117,0.3);
+}
+.tp-drawer-body { padding: 1.5rem; flex: 1; }
+.tp-drawer-badge {
+  display: inline-block; padding: 0.25rem 0.7rem;
+  background: rgba(29,158,117,0.15); border: 1px solid rgba(29,158,117,0.3);
+  border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: var(--green-bright);
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;
+}
+.tp-drawer-title { font-size: 1.6rem; font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 0.3rem; }
+.tp-drawer-region { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.25rem; }
+.tp-drawer-region i { color: var(--green); margin-right: 4px; }
+
+.tp-drawer-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+.tp-kpi {
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.75rem; display: flex; flex-direction: column; gap: 2px;
+}
+.tp-kpi i { color: var(--green); font-size: 0.9rem; margin-bottom: 4px; }
+.tp-kpi strong { font-size: 1rem; font-weight: 700; color: #fff; }
+.tp-kpi small { font-size: 0.68rem; color: var(--muted); }
+
+.tp-drawer-sec { margin-bottom: 1.5rem; }
+.tp-drawer-sec-title {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem;
+  display: flex; align-items: center; gap: 6px;
+}
+.tp-drawer-sec-title i { color: var(--green); }
+.tp-extract { font-size: 0.875rem; color: rgba(255,255,255,0.7); line-height: 1.7; }
+
+.tp-animals { display: flex; flex-wrap: wrap; gap: 6px; }
+.tp-animal { padding: 0.28rem 0.7rem; border-radius: 20px; font-size: 0.78rem; font-weight: 500; background: rgba(29,158,117,0.12); border: 1px solid rgba(29,158,117,0.25); color: #6ee7b7; }
+
+.tp-todo { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.tp-todo li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; color: rgba(255,255,255,0.75); }
+.tp-todo li::before { content: ''; width: 6px; height: 6px; background: var(--green); border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+
+.tp-drawer-map { width: 100%; height: 200px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+
+.tp-drawer-cta { margin-top: 1.5rem; display: flex; gap: 0.75rem; }
+.tp-drawer-cta a { flex: 1; padding: 0.75rem; border-radius: 10px; font-size: 0.875rem; font-weight: 700; text-align: center; text-decoration: none; transition: all 0.15s; }
+.tp-drawer-cta-primary { background: var(--green); color: #fff; }
+.tp-drawer-cta-primary:hover { background: #16a34a; }
+.tp-drawer-cta-outline { border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); }
+.tp-drawer-cta-outline:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.tp-footer {
+  text-align: center; padding: 2rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem; color: var(--muted);
+}
+.tp-footer a { color: rgba(255,255,255,0.35); text-decoration: none; }
+.tp-footer a:hover { color: rgba(255,255,255,0.6); }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .tp-nav { padding: 0.75rem 1rem; }
+  .tp-hero { padding: 3rem 1rem 2.5rem; }
+  .tp-section { padding: 2rem 1rem; }
+  .tp-map-section { padding: 0 1rem 2rem; }
+  #touristMap { height: 280px; }
+  .tp-drawer-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<%
+// Curated park names (for parks not yet in DB)
+const PARK_NAMES = {
+  HWG:'Hwange National Park', VFA:'Victoria Falls National Park',
+  MNA:'Mana Pools National Park', GNZ:'Gonarezhou National Park',
+  MTB:'Matobo National Park', NYG:'Nyanga National Park',
+  CHM:'Chimanimani National Park', CHZ:'Chizarira National Park',
+  MTS:'Matusadona National Park', ZMB:'Zambezi National Park',
+  KZM:'Kazuma Pan National Park'
+};
+const PARK_REGIONS = {
+  HWG:'Matabeleland North', VFA:'Matabeleland North', MNA:'Mashonaland West',
+  GNZ:'Masvingo', MTB:'Matabeleland South', NYG:'Manicaland',
+  CHM:'Manicaland', CHZ:'Matabeleland North', MTS:'Mashonaland West',
+  ZMB:'Matabeleland North', KZM:'Matabeleland North'
+};
+%>
+
+<!-- Nav -->
+<nav class="tp-nav">
+  <a href="/" class="tp-brand">
+    <img src="/public/images/logo.png" alt="ZimParks">
+    <div>
+      <div class="tp-brand-name">Parks Connect</div>
+      <div class="tp-brand-sub">Zimbabwe National Parks</div>
+    </div>
+  </a>
+  <div class="tp-nav-actions">
+    <a href="/feedback" class="btn-ghost"><i class="fa-regular fa-comment-dots"></i> Feedback</a>
+    <a href="/login" class="btn-primary-sm"><i class="fa-solid fa-lock"></i> Staff Login</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="tp-hero">
+  <div class="tp-hero-badge">Zimbabwe National Parks Authority</div>
+  <h1>Explore Zimbabwe's<br><span>Wild Heart</span></h1>
+  <p>11 national parks covering over 5 million hectares of pristine wilderness. From Victoria Falls to the Gonarezhou, discover the real Zimbabwe.</p>
+  <div class="tp-hero-cta">
+    <a href="#parks" class="btn-hero btn-hero--green"><i class="fa-solid fa-binoculars"></i> Browse Parks</a>
+    <a href="#map" class="btn-hero btn-hero--outline"><i class="fa-solid fa-map"></i> View on Map</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="tp-stats">
+  <div class="tp-stat"><span class="tp-stat-val">11</span><span class="tp-stat-lbl">National Parks</span></div>
+  <div class="tp-stat"><span class="tp-stat-val">5M+</span><span class="tp-stat-lbl">Hectares Protected</span></div>
+  <div class="tp-stat"><span class="tp-stat-val">500+</span><span class="tp-stat-lbl">Wildlife Species</span></div>
+  <div class="tp-stat"><span class="tp-stat-val">2 UNESCO</span><span class="tp-stat-lbl">World Heritage Sites</span></div>
+  <div class="tp-stat"><span class="tp-stat-val">Real-time</span><span class="tp-stat-lbl">Monitoring</span></div>
+</div>
+
+<!-- Parks grid -->
+<div class="tp-section" id="parks">
+  <div class="tp-section-hd">
+    <h2>National Parks of Zimbabwe</h2>
+    <p>Click any park to explore wildlife, attractions, history, and live visitor information</p>
+  </div>
+
+  <div class="tp-grid">
+    <% for (const park of parks) {
+      const name = park.name || PARK_NAMES[park.code] || park.code;
+      const region = park.region || PARK_REGIONS[park.code] || 'Zimbabwe';
+      const c = park.curated || {};
+      const firstSentence = (park.wiki?.extract || '').split('. ')[0] + '.';
+    %>
+    <div class="tp-park-card" onclick="openDrawer('<%- park.code %>')">
+      <div class="tp-card-img">
+        <% if (park.wiki && park.wiki.thumbnail) { %>
+          <img src="<%= park.wiki.thumbnail %>" alt="<%= name %>" loading="lazy">
+        <% } else { %>
+          <div class="tp-card-img-fallback"><i class="fa-solid fa-tree"></i></div>
+        <% } %>
+        <div class="tp-card-overlay"></div>
+        <span class="tp-card-badge">National Park</span>
+      </div>
+      <div class="tp-card-body">
+        <div class="tp-card-name"><%= name %></div>
+        <div class="tp-card-region"><i class="fa-solid fa-location-dot"></i> <%= region %></div>
+        <div class="tp-card-extract"><%= firstSentence || 'A protected conservation area in Zimbabwe.' %></div>
+        <div class="tp-card-facts">
+          <% if (c.area) { %><span><i class="fa-solid fa-expand"></i> <%= c.area %></span><% } %>
+          <% if (c.established) { %><span><i class="fa-solid fa-calendar"></i> Est. <%= c.established %></span><% } %>
+          <% if (c.bestTime) { %><span><i class="fa-regular fa-sun"></i> <%= c.bestTime %></span><% } %>
+        </div>
+        <% if (c.animals && c.animals.length) { %>
+        <div class="tp-card-animals">
+          <% c.animals.slice(0, 4).forEach(a => { %><span class="tp-animal-pill"><%= a %></span><% }); %>
+          <% if (c.animals.length > 4) { %><span class="tp-animal-pill">+<%= c.animals.length - 4 %> more</span><% } %>
+        </div>
+        <% } %>
+        <button class="tp-card-btn">
+          <i class="fa-solid fa-binoculars"></i> Explore Park
+        </button>
+      </div>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Map -->
+<div class="tp-map-section" id="map">
+  <h2>Parks on the Map</h2>
+  <p>Explore all national parks across Zimbabwe. Click a marker for details.</p>
+  <div id="touristMap"></div>
+</div>
+
+<!-- Feedback CTA -->
+<div style="max-width:1180px;margin:0 auto 3rem;padding:0 1.5rem">
+  <div style="background:linear-gradient(135deg,rgba(29,158,117,0.12),rgba(16,185,129,0.06));border:1px solid rgba(29,158,117,0.2);border-radius:16px;padding:2.25rem 2rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1.5rem">
+    <div>
+      <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:0.3rem">Visited a Zimbabwe national park?</h3>
+      <p style="font-size:0.875rem;color:var(--muted)">Share your experience and help ZimParks improve conservation and visitor services.</p>
+    </div>
+    <a href="/feedback" style="padding:0.75rem 1.75rem;border-radius:10px;background:var(--green);color:#fff;text-decoration:none;font-size:0.9rem;font-weight:700;white-space:nowrap">
+      <i class="fa-regular fa-star"></i> Rate Your Visit
+    </a>
+  </div>
+</div>
+
+<!-- Park Detail Drawer -->
+<div class="tp-backdrop" id="backdrop" onclick="closeDrawer()"></div>
+<div class="tp-drawer" id="drawer">
+  <button class="tp-drawer-close" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
+  <div id="drawerContent"></div>
+</div>
+
+<footer class="tp-footer">
+  <p>&copy; <%= new Date().getFullYear() %> Zimbabwe Parks and Wildlife Management Authority &nbsp;&middot;&nbsp;
+  <a href="/login">Staff Portal</a> &nbsp;&middot;&nbsp;
+  <a href="/feedback">Submit Feedback</a> &nbsp;&middot;&nbsp;
+  <a href="/">Home</a></p>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// All park data for client-side use
+const PARKS = <%- JSON.stringify(parks.map(p => ({
+  code: p.code,
+  name: p.name,
+  region: p.region,
+  curated: p.curated || {},
+  wiki: p.wiki || {},
+  id: p.id
+}))) %>;
+
+const PARK_NAMES_FB = <%- JSON.stringify(Object.fromEntries(parks.map(p => [p.code, p.name || p.code]))) %>;
+const PARK_REGIONS_FB = <%- JSON.stringify(Object.fromEntries(parks.map(p => [p.code, p.region || 'Zimbabwe']))) %>;
+
+// ── Leaflet Map ──────────────────────────────────────────────────────────────
+const map = L.map('touristMap', { center: [-19.2, 29.8], zoom: 6 });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+  maxZoom: 18
+}).addTo(map);
+
+PARKS.forEach(park => {
+  const c = park.curated;
+  if (!c.lat) return;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:38px;height:38px;border-radius:50%;background:#1D9E75;border:3px solid rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.4);cursor:pointer"><i class="fa-solid fa-tree" style="color:#fff;font-size:13px"></i></div>`,
+    iconSize:[38,38], iconAnchor:[19,19], popupAnchor:[0,-22]
+  });
+  L.marker([c.lat, c.lng], { icon })
+    .addTo(map)
+    .bindPopup(`<div style="min-width:170px;font-family:'DM Sans',sans-serif;padding:4px 0">
+      <strong style="font-size:13px;color:#0a1628">${park.name || PARK_NAMES_FB[park.code]}</strong><br>
+      <span style="font-size:11px;color:#666">${park.region || PARK_REGIONS_FB[park.code]}</span><br>
+      ${c.area ? `<span style="font-size:11px"><b>${c.area}</b></span><br>` : ''}
+      <button onclick="openDrawer('${park.code}')" style="margin-top:8px;width:100%;padding:5px;background:#1D9E75;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">Explore →</button>
+    </div>`)
+    .on('click', () => openDrawer(park.code));
+});
+
+// ── Drawer ───────────────────────────────────────────────────────────────────
+let drawerMap = null;
+
+function openDrawer(code) {
+  const park = PARKS.find(p => p.code === code);
+  if (!park) return;
+
+  const name = park.name || PARK_NAMES_FB[code] || code;
+  const region = park.region || PARK_REGIONS_FB[code] || 'Zimbabwe';
+  const c = park.curated || {};
+  const wiki = park.wiki || {};
+
+  const animals = (c.animals || []).map(a => `<span class="tp-animal">${a}</span>`).join('');
+  const todoItems = (c.todo || []).map(t => `<li>${t}</li>`).join('');
+
+  document.getElementById('drawerContent').innerHTML = `
+    ${wiki.thumbnail
+      ? `<img class="tp-drawer-img" src="${wiki.thumbnail}" alt="${name}">`
+      : `<div class="tp-drawer-img-fallback"><i class="fa-solid fa-tree"></i></div>`
+    }
+    <div class="tp-drawer-body">
+      <div class="tp-drawer-badge">National Park · Zimbabwe</div>
+      <h2 class="tp-drawer-title">${name}</h2>
+      <div class="tp-drawer-region"><i class="fa-solid fa-location-dot"></i> ${region}</div>
+
+      <div class="tp-drawer-kpis">
+        <div class="tp-kpi"><i class="fa-solid fa-expand"></i><strong>${c.area || '—'}</strong><small>Total Area</small></div>
+        <div class="tp-kpi"><i class="fa-solid fa-calendar"></i><strong>${c.established || '—'}</strong><small>Established</small></div>
+        <div class="tp-kpi"><i class="fa-regular fa-sun"></i><strong style="font-size:0.82rem">${c.bestTime || '—'}</strong><small>Best Visit</small></div>
+      </div>
+
+      ${wiki.extract ? `
+      <div class="tp-drawer-sec">
+        <div class="tp-drawer-sec-title"><i class="fa-solid fa-book-open"></i> About this Park</div>
+        <p class="tp-extract">${wiki.extract}</p>
+      </div>` : ''}
+
+      ${animals ? `
+      <div class="tp-drawer-sec">
+        <div class="tp-drawer-sec-title"><i class="fa-solid fa-paw"></i> Wildlife</div>
+        <div class="tp-animals">${animals}</div>
+      </div>` : ''}
+
+      ${todoItems ? `
+      <div class="tp-drawer-sec">
+        <div class="tp-drawer-sec-title"><i class="fa-solid fa-compass"></i> Things to Do</div>
+        <ul class="tp-todo">${todoItems}</ul>
+      </div>` : ''}
+
+      ${c.lat ? `
+      <div class="tp-drawer-sec">
+        <div class="tp-drawer-sec-title"><i class="fa-solid fa-map-pin"></i> Location</div>
+        <div class="tp-drawer-map" id="drawerMapEl"></div>
+      </div>` : ''}
+
+      <div class="tp-drawer-cta">
+        <a href="/feedback?park_id=${park.id || ''}" class="tp-drawer-cta-primary"><i class="fa-regular fa-star"></i> Rate My Visit</a>
+        <a href="/" class="tp-drawer-cta-outline"><i class="fa-solid fa-house"></i> Home</a>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Mini map inside drawer
+  if (c.lat) {
+    if (drawerMap) { drawerMap.remove(); drawerMap = null; }
+    setTimeout(() => {
+      drawerMap = L.map('drawerMapEl', { center: [c.lat, c.lng], zoom: 8, zoomControl: false, scrollWheelZoom: false });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(drawerMap);
+      L.marker([c.lat, c.lng]).addTo(drawerMap);
+    }, 80);
+  }
+}
+
+function closeDrawer() {
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+  document.body.style.overflow = '';
+  if (drawerMap) { drawerMap.remove(); drawerMap = null; }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+// ── PWA install prompt ───────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

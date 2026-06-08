@@ -10,21 +10,25 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/public/css/styles.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1D9E75">
+  <link rel="apple-touch-icon" href="/public/images/logo.png">
 </head>
 <body class="zim-body">
+  <% const _u = locals.user || null; %>
   <% const roleMap = { authority_admin: 'HQ Admin', environment_officer: 'Park Manager', tourism_operator: 'Reception Staff' }; %>
-  <% const roleLabel = roleMap[user?.role] || user?.role || 'Guest'; %>
-  <% const initials = user?.name ? user.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase() : 'ZP'; %>
+  <% const roleLabel = roleMap[_u?.role] || _u?.role || 'Guest'; %>
+  <% const initials = _u?.name ? _u.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase() : 'ZP'; %>
   <% const currentSection = locals.section || 'dashboard'; %>
 
-  <% if (user) { %>
+  <% if (_u) { %>
     <div class="zim-shell">
       <aside class="zim-sidebar d-none d-lg-flex">
         <div class="zim-sidebar-brand">
           <img src="/public/images/logo.png" alt="ZimParks logo" class="zim-brand-logo">
           <div>
             <h1>ZIMPARKS</h1>
-            <p><%= user.role === 'tourism_operator' ? 'WILDLIFE · HERITAGE · HOSPITALITY' : 'HQ ANALYTICS DASHBOARD' %></p>
+            <p><%= _u.role === 'tourism_operator' ? 'WILDLIFE · HERITAGE · HOSPITALITY' : 'HQ ANALYTICS DASHBOARD' %></p>
           </div>
         </div>
 
@@ -32,40 +36,49 @@
           <a class="zim-nav-link <%= currentSection === 'dashboard' ? 'active' : '' %>" href="/dashboard">
             <i class="fa-solid fa-house"></i>
             <span>Dashboard</span>
+            <span class="nav-status nav-status--orange" title="Partial — some live data"></span>
           </a>
-          <a class="zim-nav-link <%= currentSection === 'parks' ? 'active' : '' %>" href="/dashboard">
+          <a class="zim-nav-link <%= currentSection === 'parks' ? 'active' : '' %>" href="/dashboard/parks">
             <i class="fa-solid fa-tree"></i>
             <span>Parks</span>
+            <span class="nav-status nav-status--green" title="Live — real data &amp; map"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'revenue' ? 'active' : '' %>" href="/dashboard/revenue">
             <i class="fa-solid fa-dollar-sign"></i>
             <span>Revenue</span>
+            <span class="nav-status nav-status--orange" title="Partial — estimated calculations"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'environment' ? 'active' : '' %>" href="/dashboard/alerts">
             <i class="fa-solid fa-leaf"></i>
             <span>Environment</span>
+            <span class="nav-status nav-status--orange" title="Partial — uses alerts view"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'maintenance' ? 'active' : '' %>" href="/dashboard/alerts">
             <i class="fa-solid fa-screwdriver-wrench"></i>
             <span>Maintenance</span>
+            <span class="nav-status nav-status--red" title="Demo — no dedicated view yet"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'reports' ? 'active' : '' %>" href="/dashboard/revenue">
             <i class="fa-solid fa-chart-column"></i>
             <span>Reports</span>
+            <span class="nav-status nav-status--orange" title="Partial — CSV export only"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'visitors' ? 'active' : '' %>" href="/dashboard/visitors">
             <i class="fa-solid fa-users"></i>
             <span>Visitors</span>
+            <span class="nav-status nav-status--orange" title="Partial — real data, basic view"></span>
           </a>
-          <% if (user && user.role === 'authority_admin') { %>
+          <% if (_u && _u.role === 'authority_admin') { %>
           <a class="zim-nav-link <%= currentSection === 'users' ? 'active' : '' %>" href="/dashboard/users">
             <i class="fa-solid fa-user-gear"></i>
             <span>Users</span>
+            <span class="nav-status nav-status--green" title="Live — full CRUD working"></span>
           </a>
           <% } %>
-          <a class="zim-nav-link" href="/dashboard">
+          <a class="zim-nav-link <%= currentSection === 'settings' ? 'active' : '' %>" href="/dashboard/settings">
             <i class="fa-solid fa-gear"></i>
             <span>Settings</span>
+            <span class="nav-status nav-status--red" title="Demo — not yet built"></span>
           </a>
         </nav>
 
@@ -115,24 +128,27 @@
           <div class="zim-topbar-actions">
             <div class="zim-topbar-chip">
               <i class="fa-regular fa-calendar"></i>
-              <span><%= topbarDateRange || '19 May 2025' %></span>
+              <span><%= locals.topbarDateRange || new Date().toLocaleDateString('en-ZW', {dateStyle:'medium'}) %></span>
               <i class="fa-solid fa-chevron-down"></i>
             </div>
-            <% if (showFiltersButton) { %>
+            <% if (locals.showFiltersButton) { %>
               <button class="zim-filter-btn" type="button">
                 <i class="fa-solid fa-filter"></i>
                 <span>Filters</span>
               </button>
             <% } %>
+            <button class="zim-theme-btn" type="button" id="themeToggle" aria-label="Toggle theme" title="Toggle dark/light mode">
+              <i class="fa-solid fa-moon" id="themeIcon"></i>
+            </button>
             <button class="zim-bell" type="button" aria-label="Notifications">
               <i class="fa-regular fa-bell"></i>
-              <span class="zim-bell-count"><%= notificationCount || 3 %></span>
+              <span class="zim-bell-count"><%= locals.notificationCount || 0 %></span>
             </button>
             <div class="zim-profile">
               <div class="zim-profile-avatar"><%= initials %></div>
               <div class="d-none d-md-block">
                 <strong><%= roleLabel %></strong>
-                <span><%= user?.name || 'ZimParks User' %></span>
+                <span><%= _u?.name || 'ZimParks User' %></span>
               </div>
               <i class="fa-solid fa-chevron-down"></i>
             </div>
@@ -151,5 +167,29 @@
   <% } %>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    (function () {
+      const btn = document.getElementById('themeToggle');
+      const icon = document.getElementById('themeIcon');
+      if (!btn) return;
+
+      function applyTheme(dark) {
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        if (icon) {
+          icon.className = dark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+      }
+
+      const saved = localStorage.getItem('zp-theme');
+      applyTheme(saved === 'dark');
+
+      btn.addEventListener('click', function () {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const next = !isDark;
+        localStorage.setItem('zp-theme', next ? 'dark' : 'light');
+        applyTheme(next);
+      });
+    })();
+  </script>
 </body>
 </html>

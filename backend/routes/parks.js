@@ -4,6 +4,7 @@ import { authorizeRoles } from '../middleware/roles.js';
 import {
   listParks,
   getAssigned,
+  getParkDetail,
   listAssignments,
   assignPark,
   upsertThreshold,
@@ -18,5 +19,6 @@ router.get('/assignments', authenticate, authorizeRoles('authority_admin'), list
 router.post('/assign', authenticate, authorizeRoles('authority_admin'), assignPark);
 router.get('/thresholds', authenticate, authorizeRoles('authority_admin', 'environment_officer'), listThresholds);
 router.post('/thresholds', authenticate, authorizeRoles('authority_admin'), upsertThreshold);
+router.get('/:id', getParkDetail);
 
 export default router;

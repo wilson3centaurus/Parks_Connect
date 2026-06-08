@@ -1,0 +1,40 @@
+{
+  "name": "Parks Connect — Zimbabwe National Parks",
+  "short_name": "ZimParks",
+  "description": "Explore Zimbabwe's national parks. Visit as a tourist, submit feedback, or access the staff portal.",
+  "start_url": "/parks",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a1628",
+  "theme_color": "#1D9E75",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["travel", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Explore Parks",
+      "short_name": "Parks",
+      "url": "/parks",
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Submit Feedback",
+      "short_name": "Feedback",
+      "url": "/feedback",
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+    }
+  ]
+}

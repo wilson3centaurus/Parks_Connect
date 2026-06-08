@@ -95,6 +95,43 @@ export async function upsertThreshold(req, res) {
   res.status(201).json({ message: 'created' });
 }
 
+export async function getParkDetail(req, res) {
+  const db = await getDb();
+  const parkId = Number(req.params.id);
+  if (!parkId) return res.status(400).json({ message: 'Invalid park ID' });
+
+  const park = await db.get(`SELECT * FROM parks WHERE id = ?`, [parkId]);
+  if (!park) return res.status(404).json({ message: 'Park not found' });
+
+  const [officers, visitorStats, recentLogs] = await Promise.all([
+    db.all(
+      `SELECT u.id, u.name, u.email, u.role, pa.role AS assignment_role
+       FROM park_assignments pa
+       JOIN users u ON u.id = pa.user_id
+       WHERE pa.park_id = ?
+       ORDER BY u.name`,
+      [parkId]
+    ),
+    db.get(
+      `SELECT
+         COUNT(*) AS log_count,
+         COALESCE(SUM(visitors_count), 0) AS total_visitors,
+         COALESCE(SUM(local_visitors), 0) AS local_visitors,
+         COALESCE(SUM(international_visitors), 0) AS international_visitors,
+         MAX(log_date) AS last_visit_date
+       FROM visitor_logs WHERE park_id = ?`,
+      [parkId]
+    ),
+    db.all(
+      `SELECT log_date, visitors_count, local_visitors, international_visitors
+       FROM visitor_logs WHERE park_id = ? ORDER BY log_date DESC LIMIT 8`,
+      [parkId]
+    )
+  ]);
+
+  return res.json({ park, officers, visitorStats: visitorStats || {}, recentLogs });
+}
+
 export async function listThresholds(req, res) {
   const db = await getDb();
   const role = normalizeRole(req.user.role);
