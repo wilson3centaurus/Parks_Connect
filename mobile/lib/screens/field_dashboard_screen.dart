@@ -14,6 +14,9 @@ import '../services/app_state.dart';
 import '../services/local_cache_service.dart';
 import '../services/sync_service.dart';
 import '../widgets/app_theme.dart';
+import 'alerts_screen.dart';
+import 'incident_report_screen.dart';
+import 'profile_screen.dart';
 import 'staff_login_screen.dart';
 
 class FieldDashboardScreen extends StatefulWidget {

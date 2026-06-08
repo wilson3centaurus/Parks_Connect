@@ -1,156 +1,139 @@
-import { Pool } from 'pg';
+﻿import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-function safeDecodeUriComponent(value) {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
+// Self-hosted Supabase VPS may use a certificate not trusted by Node.js.
+// Must be set before the first fetch call — dotenv.config() is called above.
+if (process.env.PGSSL !== 'true') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
-function normalizeDatabaseUrl(rawValue) {
-  const value = String(rawValue || '').trim();
-  if (!/^postgres(?:ql)?:\/\//i.test(value)) {
-    return value;
-  }
+const supabaseUrl  = process.env.SUPABASE_URL;
+const supabaseKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const dbSchema     = process.env.DB_SCHEMA || 'parks_connect';
 
-  const protocolSeparatorIndex = value.indexOf('://');
-  const protocol = value.slice(0, protocolSeparatorIndex);
-  const rest = value.slice(protocolSeparatorIndex + 3);
-  const slashIndex = rest.indexOf('/');
-
-  if (slashIndex === -1) {
-    return value;
-  }
-
-  const authority = rest.slice(0, slashIndex);
-  const suffix = rest.slice(slashIndex);
-  const lastAtIndex = authority.lastIndexOf('@');
-  if (lastAtIndex === -1) {
-    return value;
-  }
-
-  const credentials = authority.slice(0, lastAtIndex);
-  const host = authority.slice(lastAtIndex + 1);
-  const firstColonIndex = credentials.indexOf(':');
-  if (firstColonIndex === -1) {
-    return value;
-  }
-
-  const rawUser = credentials.slice(0, firstColonIndex);
-  const rawPassword = credentials.slice(firstColonIndex + 1);
-  const safeUser = encodeURIComponent(safeDecodeUriComponent(rawUser));
-  const safePassword = encodeURIComponent(safeDecodeUriComponent(rawPassword));
-
-  return `${protocol}://${safeUser}:${safePassword}@${host}${suffix}`;
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in backend/.env'
+  );
 }
 
-function resolveConnectionString() {
-  if (process.env.DATABASE_URL) {
-    return normalizeDatabaseUrl(process.env.DATABASE_URL);
-  }
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  db:       { schema: dbSchema },
+  auth:     { persistSession: false },
+  realtime: { transport: ws }   // required for Node.js < 22
+});
 
-  const user = process.env.DB_USER || process.env.PGUSER || 'postgres';
-  const password = encodeURIComponent(process.env.DB_PASSWORD || process.env.PGPASSWORD || '');
-  const host = process.env.DB_HOST || process.env.PGHOST || '127.0.0.1';
-  const port = process.env.DB_PORT || process.env.PGPORT || '5432';
-  const database = process.env.DB_NAME || process.env.PGDATABASE || 'postgres';
+// Separate anon-key client used only for auth sign-in operations.
+// signInWithPassword must use the anon key, not the service_role key.
+const anonKey = process.env.SUPABASE_ANON_KEY || supabaseKey;
+export const supabaseAnon = createClient(supabaseUrl, anonKey, {
+  auth:     { persistSession: false },
+  realtime: { transport: ws }
+});
 
-  return `postgresql://${user}:${password}@${host}:${port}/${database}`;
+// ---------------------------------------------------------------------------
+// Query helpers — same interface as the previous pg adapter
+// ---------------------------------------------------------------------------
+
+/**
+ * Safely quote a JS value into a SQL literal string.
+ * Used to inline params directly into SQL before sending to exec_dyn,
+ * which avoids all server-side $N substitution complexity.
+ */
+function quoteLiteral(value) {
+  if (value === null || value === undefined) return 'NULL';
+  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'NULL';
+  if (value instanceof Date) return `'${value.toISOString()}'`;
+  // String: wrap in single quotes, escape any existing single quotes by doubling
+  return "'" + String(value).replace(/'/g, "''") + "'";
 }
 
-function normalizeQuery(sql, params = []) {
+/**
+ * Replace ? placeholders with safely-quoted literal values, returning
+ * a fully-formed SQL string with no remaining placeholders.
+ */
+function inlineQuery(sql, params = []) {
   let index = 0;
-  const values = [];
-  const text = sql.replace(/\?/g, () => {
+  return sql.replace(/\?/g, () => {
     const value = params[index++];
-
     if (Array.isArray(value)) {
       if (!value.length) return 'NULL';
-      return value.map((item) => {
-        values.push(item);
-        return `$${values.length}`;
-      }).join(', ');
+      return value.map(quoteLiteral).join(', ');
     }
-
-    values.push(value);
-    return `$${values.length}`;
+    return quoteLiteral(value);
   });
-
-  return { text, values };
 }
 
 function withReturningId(sql) {
-  if (!/^\s*insert\b/i.test(sql) || /\breturning\b/i.test(sql)) {
-    return sql;
-  }
-
+  if (!/^\s*insert\b/i.test(sql) || /\breturning\b/i.test(sql)) return sql;
   return `${sql} RETURNING id`;
 }
 
-class DatabaseAdapter {
-  constructor(pool) {
-    this.pool = pool;
+/**
+ * Execute any SQL via the parks_connect.exec_dyn RPC function.
+ * Returns an array of row objects (empty array for DDL/DML without RETURNING).
+ */
+async function execDyn(sql, params = []) {
+  // Inline all params as quoted literals — exec_dyn receives clean SQL with no placeholders.
+  const text = inlineQuery(sql, params);
+  const { data, error } = await supabase.rpc('exec_dyn', {
+    sql_text: text,
+    params:   []            // no server-side substitution needed
+  }, {
+    head: false,
+    count: null
+  });
+  if (error) {
+    throw new Error(error.message || JSON.stringify(error));
   }
+  // data is the jsonb array returned by the function (already parsed by the client)
+  return Array.isArray(data) ? data : (data ? [data] : []);
+}
 
+// ---------------------------------------------------------------------------
+// DatabaseAdapter — identical public interface as before
+// ---------------------------------------------------------------------------
+
+class DatabaseAdapter {
   async get(sql, params = []) {
     const rows = await this.all(sql, params);
     return rows[0];
   }
 
   async all(sql, params = []) {
-    const { text, values } = normalizeQuery(sql, params);
-    const result = await this.pool.query(text, values);
-    return result.rows;
+    return execDyn(sql, params);
   }
 
   async run(sql, params = []) {
     const query = withReturningId(sql);
-    const { text, values } = normalizeQuery(query, params);
-    const result = await this.pool.query(text, values);
+    const result = await execDyn(query, params);
     return {
-      lastID: result.rows?.[0]?.id ?? null,
-      changes: result.rowCount ?? 0
+      lastID: result?.[0]?.id ?? null,
+      changes: result?.length ?? 0
     };
   }
 
   async exec(sql) {
-    await this.pool.query(sql);
+    await execDyn(sql, []);
   }
 }
 
-let poolInstance;
 let dbInstance;
 
 export async function getDb() {
-  if (!poolInstance) {
-    const sslDisabled = process.env.PGSSL === 'false' || process.env.DB_SSL === 'false';
-    poolInstance = new Pool({
-      connectionString: resolveConnectionString(),
-      max: Number(process.env.DB_POOL_MAX || 10),
-      idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS || 10000),
-      ssl: sslDisabled ? false : { rejectUnauthorized: false }
-    });
-
-    poolInstance.on('error', (err) => {
-      console.error('Unexpected PostgreSQL pool error', err);
-    });
-  }
-
   if (!dbInstance) {
-    dbInstance = new DatabaseAdapter(poolInstance);
+    dbInstance = new DatabaseAdapter();
   }
-
   return dbInstance;
 }
 
 export async function closeDb() {
-  if (poolInstance) {
-    await poolInstance.end();
-    poolInstance = null;
-    dbInstance = null;
-  }
+  // No connection pool to drain — HTTP client is stateless
+  dbInstance = null;
 }
+
+export { supabase };

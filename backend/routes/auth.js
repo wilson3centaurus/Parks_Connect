@@ -1,12 +1,21 @@
 import { Router } from 'express';
-import { body } from 'express-validator';
-import { login, register, me, selfRegister, forgotPassword } from '../controllers/authController.js';
+import { body, param } from 'express-validator';
+import {
+  login,
+  register,
+  me,
+  listUsers,
+  deleteUser,
+  adminResetUserPassword,
+  changePassword
+} from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 import { authorizeRoles } from '../middleware/roles.js';
 import { handleValidation } from '../middleware/validate.js';
 
 const router = Router();
 
+// Public: login
 router.post(
   '/login',
   [
@@ -16,6 +25,8 @@ router.post(
   handleValidation,
   login
 );
+
+// Admin-only: create a staff account
 router.post(
   '/register',
   authenticate,
@@ -23,37 +34,53 @@ router.post(
   [
     body('name').trim().notEmpty().withMessage('Name is required.'),
     body('email').isEmail().withMessage('Provide a valid email address.'),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long.'),
-    body('role').optional().isString().withMessage('role must be a string.'),
-    body('park_id').optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage('park_id must be a positive integer.')
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters.'),
+    body('role').optional().isString(),
+    body('park_id').optional({ values: 'falsy' }).isInt({ min: 1 })
   ],
   handleValidation,
   register
 );
+
+// Admin-only: list all staff users
+router.get('/users', authenticate, authorizeRoles('authority_admin'), listUsers);
+
+// Admin-only: delete a staff user
+router.delete(
+  '/users/:id',
+  authenticate,
+  authorizeRoles('authority_admin'),
+  [param('id').isInt({ min: 1 }).withMessage('Invalid user ID')],
+  handleValidation,
+  deleteUser
+);
+
+// Admin-only: reset a staff user's password
 router.post(
-  '/self-register',
+  '/users/:id/reset-password',
+  authenticate,
+  authorizeRoles('authority_admin'),
   [
-    body('name').trim().notEmpty().withMessage('Name is required.'),
-    body('email').isEmail().withMessage('Provide a valid email address.'),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long.'),
-    body('role').optional().isString().withMessage('role must be a string.'),
-    body('park_id').optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage('park_id must be a positive integer.'),
-    body('it_admin_key').isString().notEmpty().withMessage('it_admin_key is required.')
+    param('id').isInt({ min: 1 }).withMessage('Invalid user ID'),
+    body('new_password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters.')
   ],
   handleValidation,
-  selfRegister
+  adminResetUserPassword
 );
+
+// Authenticated: change own password (staff or superadmin)
 router.post(
-  '/forgot-password',
+  '/change-password',
+  authenticate,
   [
-    body('email').isEmail().withMessage('Provide a valid email address.'),
-    body('new_password').isLength({ min: 8 }).withMessage('new_password must be at least 8 characters long.'),
-    body('confirm_password').isString().notEmpty().withMessage('confirm_password is required.'),
-    body('it_admin_key').isString().notEmpty().withMessage('it_admin_key is required.')
+    body('current_password').isString().notEmpty().withMessage('Current password is required.'),
+    body('new_password').isLength({ min: 8 }).withMessage('New password must be at least 8 characters.')
   ],
   handleValidation,
-  forgotPassword
+  changePassword
 );
+
+// Authenticated: get current user profile
 router.get('/me', authenticate, me);
 
 export default router;

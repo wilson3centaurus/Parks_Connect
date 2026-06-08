@@ -252,12 +252,14 @@ const dataMaintenanceStatements = [
    SET channel = COALESCE(channel, CASE WHEN device_id IS NOT NULL THEN 'mobile' ELSE 'web' END),
        category = COALESCE(category, 'general'),
        visit_date = COALESCE(visit_date, submitted_at::date),
-       updated_at = COALESCE(updated_at, created_at);`,
+       updated_at = COALESCE(updated_at, created_at)
+   WHERE 1=1;`,
   `UPDATE tourist_feedback
    SET channel = COALESCE(channel, CASE WHEN device_id IS NOT NULL THEN 'mobile' ELSE 'web' END),
        category = COALESCE(category, 'general'),
        visit_date = COALESCE(visit_date, submitted_at::date),
-       updated_at = COALESCE(updated_at, created_at);`,
+       updated_at = COALESCE(updated_at, created_at)
+   WHERE 1=1;`,
   `UPDATE alerts
    SET summary_text = COALESCE(summary_text, message),
        severity_level = COALESCE(
@@ -278,7 +280,8 @@ const dataMaintenanceStatements = [
            ELSE 'open'
        END
        ),
-       triggered_at = COALESCE(triggered_at, created_at);`,
+       triggered_at = COALESCE(triggered_at, created_at)
+   WHERE 1=1;`,
   `CREATE INDEX IF NOT EXISTS idx_tourist_feedback_channel_category ON tourist_feedback(channel, category);`,
   `CREATE INDEX IF NOT EXISTS idx_alerts_alert_status_triggered ON alerts(alert_status, triggered_at);`
 ];
@@ -309,14 +312,84 @@ async function seedDefaultThresholds(db) {
 
 export async function runMigrations() {
   const db = await getDb();
+  const schema = process.env.DB_SCHEMA || 'public';
 
+  // ── Step 1: create schema, register with PostgREST, grant access ────────────
+  // PostgREST registration uses the additive DO block required by SHARED_DB_RULES:
+  // never replaces existing schemas — reads current list and appends.
+  const schemaSetup = [
+    `CREATE SCHEMA IF NOT EXISTS ${schema}`,
+
+    `DO $$
+DECLARE
+  v_current text;
+  v_schema  text := '${schema}';
+BEGIN
+  SELECT split_part(cfg, '=', 2) INTO v_current
+  FROM pg_roles, unnest(rolconfig) AS cfg
+  WHERE rolname = 'authenticator'
+    AND cfg LIKE 'pgrst.db_schemas=%';
+  IF v_current IS NULL OR v_current = '' THEN
+    v_current := 'public,storage,graphql_public,robocore,robokorda,aura,smartschools,azim_motors,icecream_erp';
+  END IF;
+  IF position(v_schema IN v_current) = 0 THEN
+    EXECUTE format('ALTER ROLE authenticator SET "pgrst.db_schemas" TO %L', v_current || ',' || v_schema);
+    NOTIFY pgrst;
+    RAISE NOTICE 'pgrst.db_schemas updated to include %', v_schema;
+  ELSE
+    RAISE NOTICE 'Schema % already registered in pgrst.db_schemas', v_schema;
+  END IF;
+END $$`,
+
+    `GRANT USAGE ON SCHEMA ${schema} TO anon, authenticated, service_role`,
+    `GRANT ALL ON ALL TABLES IN SCHEMA ${schema} TO service_role`,
+    `GRANT ALL ON ALL SEQUENCES IN SCHEMA ${schema} TO service_role`,
+    `GRANT ALL ON ALL TABLES IN SCHEMA ${schema} TO authenticated`,
+    `GRANT SELECT ON ALL TABLES IN SCHEMA ${schema} TO anon`,
+    `ALTER DEFAULT PRIVILEGES IN SCHEMA ${schema} GRANT ALL ON TABLES TO service_role, authenticated`,
+    `ALTER DEFAULT PRIVILEGES IN SCHEMA ${schema} GRANT ALL ON SEQUENCES TO service_role, authenticated`,
+    `ALTER DEFAULT PRIVILEGES IN SCHEMA ${schema} GRANT SELECT ON TABLES TO anon`
+  ];
+
+  for (const sql of schemaSetup) {
+    await db.exec(sql);
+  }
+
+  // ── Step 2: create / update tables ──────────────────────────────────────────
   for (const sql of schemaStatements) {
     await db.exec(sql);
   }
 
+  // ── Step 3: data maintenance / column additions ──────────────────────────────
   for (const sql of dataMaintenanceStatements) {
     await db.exec(sql);
   }
+
+  // ── Step 4: enable RLS on all tables (SHARED_DB_RULES Rule 7) ───────────────
+  // The backend connects as postgres (superuser) so RLS is bypassed for the API.
+  // Policies still block direct PostgREST/anon access as required.
+  await db.exec(`DO $$
+DECLARE
+  t text;
+BEGIN
+  FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = '${schema}' LOOP
+    EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', '${schema}', t);
+    BEGIN
+      EXECUTE format(
+        'CREATE POLICY service_role_all ON %I.%I FOR ALL TO service_role USING (true) WITH CHECK (true)',
+        '${schema}', t
+      );
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+    BEGIN
+      EXECUTE format(
+        'CREATE POLICY anon_deny ON %I.%I FOR ALL TO anon USING (false)',
+        '${schema}', t
+      );
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+  END LOOP;
+END $$`);
 
   await seedDefaultThresholds(db);
 }

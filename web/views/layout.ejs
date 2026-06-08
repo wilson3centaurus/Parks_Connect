@@ -15,7 +15,7 @@
   <% const roleMap = { authority_admin: 'HQ Admin', environment_officer: 'Park Manager', tourism_operator: 'Reception Staff' }; %>
   <% const roleLabel = roleMap[user?.role] || user?.role || 'Guest'; %>
   <% const initials = user?.name ? user.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase() : 'ZP'; %>
-  <% const currentSection = section || 'dashboard'; %>
+  <% const currentSection = locals.section || 'dashboard'; %>
 
   <% if (user) { %>
     <div class="zim-shell">
@@ -57,6 +57,12 @@
             <i class="fa-solid fa-users"></i>
             <span>Visitors</span>
           </a>
+          <% if (user && user.role === 'authority_admin') { %>
+          <a class="zim-nav-link <%= currentSection === 'users' ? 'active' : '' %>" href="/dashboard/users">
+            <i class="fa-solid fa-user-gear"></i>
+            <span>Users</span>
+          </a>
+          <% } %>
           <a class="zim-nav-link" href="/dashboard">
             <i class="fa-solid fa-gear"></i>
             <span>Settings</span>

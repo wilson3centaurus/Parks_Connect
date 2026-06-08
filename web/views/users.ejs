@@ -1,0 +1,200 @@
+<% /* User management — authority_admin only */ %>
+<style>
+  .um-page { padding: 2rem; max-width: 1100px; }
+  .um-header { margin-bottom: 2rem; }
+  .um-header h2 { font-size: 1.5rem; font-weight: 700; color: var(--zim-text, #fff); margin-bottom: 0.25rem; }
+  .um-header p { font-size: 0.875rem; color: var(--zim-text-muted, rgba(255,255,255,0.5)); }
+  .um-notice { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem; }
+  .um-notice.success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); color: #22c55e; }
+  .um-notice.error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #f87171; }
+
+  /* Create user card */
+  .um-create-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.75rem; margin-bottom: 2rem; }
+  .um-create-card h3 { font-size: 1rem; font-weight: 700; color: var(--zim-text, #fff); margin-bottom: 1.25rem; }
+  .um-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+  .um-field label { display: block; font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem; }
+  .um-field input, .um-field select { width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: #fff; font-size: 0.875rem; }
+  .um-field input::placeholder { color: rgba(255,255,255,0.3); }
+  .um-field select option { background: #1e293b; }
+  .um-field-note { font-size: 0.72rem; color: rgba(255,255,255,0.35); margin-top: 0.3rem; }
+  .btn-create { padding: 0.6rem 1.5rem; border-radius: 8px; background: #22c55e; color: #fff; border: none; font-size: 0.875rem; font-weight: 700; cursor: pointer; }
+  .btn-create:hover { background: #16a34a; }
+
+  /* Users table */
+  .um-table-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; }
+  .um-table-head { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .um-table-head h3 { font-size: 1rem; font-weight: 700; color: #fff; margin: 0; }
+  .um-count { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 0.65rem 1.25rem; text-align: left; font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  td { padding: 0.85rem 1.25rem; font-size: 0.875rem; color: rgba(255,255,255,0.85); border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.025); }
+  .role-badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+  .role-badge.authority_admin { background: rgba(168,85,247,0.2); color: #c084fc; }
+  .role-badge.environment_officer { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .role-badge.tourism_operator { background: rgba(59,130,246,0.15); color: #60a5fa; }
+
+  /* Action buttons */
+  .um-actions { display: flex; gap: 0.5rem; align-items: center; }
+  .btn-reset, .btn-delete { padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; border: none; cursor: pointer; }
+  .btn-reset { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .btn-reset:hover { background: rgba(59,130,246,0.3); }
+  .btn-delete { background: rgba(239,68,68,0.12); color: #f87171; }
+  .btn-delete:hover { background: rgba(239,68,68,0.25); }
+
+  /* Reset modal */
+  .um-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+  .um-modal-overlay.open { display: flex; }
+  .um-modal { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 2rem; width: 100%; max-width: 420px; }
+  .um-modal h4 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
+  .um-modal p { font-size: 0.825rem; color: rgba(255,255,255,0.5); margin-bottom: 1.25rem; }
+  .um-modal .um-field { margin-bottom: 1rem; }
+  .um-modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+  .btn-cancel { padding: 0.5rem 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.7); font-size: 0.875rem; cursor: pointer; }
+  .btn-confirm { padding: 0.5rem 1.25rem; border-radius: 8px; border: none; background: #22c55e; color: #fff; font-size: 0.875rem; font-weight: 700; cursor: pointer; }
+</style>
+
+<div class="um-page">
+  <div class="um-header">
+    <h2>User Management</h2>
+    <p>Create staff accounts and manage access for environment officers and tourism operators.</p>
+  </div>
+
+  <% if (success) { %>
+    <div class="um-notice success"><i class="fa-solid fa-check-circle"></i> <%= success %></div>
+  <% } %>
+  <% if (error) { %>
+    <div class="um-notice error"><i class="fa-solid fa-circle-exclamation"></i> <%= error %></div>
+  <% } %>
+
+  <!-- Create account -->
+  <div class="um-create-card">
+    <h3>Create Staff Account</h3>
+    <form action="/dashboard/users" method="POST" id="createForm">
+      <div class="um-grid">
+        <div class="um-field">
+          <label>Full Name</label>
+          <input name="name" type="text" placeholder="e.g. Tendai Moyo" required minlength="2">
+        </div>
+        <div class="um-field">
+          <label>Email</label>
+          <input name="email" type="email" placeholder="staff@zimparks.gov.zw" required>
+        </div>
+        <div class="um-field">
+          <label>Role</label>
+          <select name="role" id="roleSelect" required>
+            <option value="authority_admin">Authority Admin</option>
+            <option value="environment_officer">Environment Officer</option>
+            <option value="tourism_operator">Tourism Operator</option>
+          </select>
+        </div>
+        <div class="um-field" id="parkField">
+          <label>Assigned Park</label>
+          <select name="park_id" id="parkSelect">
+            <option value="">— Select park —</option>
+            <% if (parks && parks.length) { %>
+              <% parks.forEach(function(park) { %>
+                <option value="<%= park.id %>"><%= park.name %></option>
+              <% }); %>
+            <% } %>
+          </select>
+          <div class="um-field-note">Required for officers and operators.</div>
+        </div>
+        <div class="um-field">
+          <label>Password</label>
+          <input name="password" type="password" placeholder="Min 8 chars, letters + numbers" required minlength="8">
+        </div>
+      </div>
+      <button type="submit" class="btn-create">Create Account</button>
+    </form>
+  </div>
+
+  <!-- Users table -->
+  <div class="um-table-card">
+    <div class="um-table-head">
+      <h3>Staff Accounts</h3>
+      <span class="um-count"><%= users ? users.length : 0 %> accounts</span>
+    </div>
+    <% if (!users || users.length === 0) { %>
+      <p style="padding: 2rem 1.5rem; color: rgba(255,255,255,0.4); font-size: 0.875rem;">No staff accounts yet. Create the first one above.</p>
+    <% } else { %>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Assigned Park</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(function(u) { %>
+          <tr>
+            <td><strong><%= u.name %></strong></td>
+            <td style="color: rgba(255,255,255,0.55);"><%= u.email %></td>
+            <td><span class="role-badge <%= u.role %>"><%= u.role.replace(/_/g, ' ') %></span></td>
+            <td style="color: rgba(255,255,255,0.55);"><%- u.park_name || '<span style="color:rgba(255,255,255,0.25)">All parks</span>' %></td>
+            <td style="color: rgba(255,255,255,0.4); font-size: 0.8rem;"><%= u.created_at ? new Date(u.created_at).toLocaleDateString('en-ZW', { dateStyle: 'medium' }) : '—' %></td>
+            <td>
+              <div class="um-actions">
+                <button class="btn-reset" onclick="openResetModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>')">Reset PW</button>
+                <form action="/dashboard/users/<%= u.id %>/delete" method="POST" onsubmit="return confirm('Remove <%= u.name %>? This cannot be undone.')">
+                  <button type="submit" class="btn-delete">Remove</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+    <% } %>
+  </div>
+</div>
+
+<!-- Reset password modal -->
+<div class="um-modal-overlay" id="resetModal">
+  <div class="um-modal">
+    <h4>Reset Password</h4>
+    <p id="resetModalDesc">Set a new password for this account.</p>
+    <form id="resetForm" method="POST">
+      <div class="um-field">
+        <label>New Password</label>
+        <input name="new_password" type="password" placeholder="Min 8 chars, letters + numbers" required minlength="8">
+      </div>
+      <div class="um-modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeResetModal()">Cancel</button>
+        <button type="submit" class="btn-confirm">Reset Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Show/hide park select based on role
+  var roleSelect = document.getElementById('roleSelect');
+  var parkField = document.getElementById('parkField');
+  var parkSelect = document.getElementById('parkSelect');
+
+  function updateParkRequired() {
+    var needsPark = roleSelect.value === 'environment_officer' || roleSelect.value === 'tourism_operator';
+    parkSelect.required = needsPark;
+  }
+  roleSelect.addEventListener('change', updateParkRequired);
+  updateParkRequired();
+
+  // Reset password modal
+  function openResetModal(userId, name) {
+    document.getElementById('resetModalDesc').textContent = 'Set a new password for ' + name + '.';
+    document.getElementById('resetForm').action = '/dashboard/users/' + userId + '/reset-password';
+    document.getElementById('resetModal').classList.add('open');
+  }
+  function closeResetModal() {
+    document.getElementById('resetModal').classList.remove('open');
+  }
+  document.getElementById('resetModal').addEventListener('click', function(e) {
+    if (e.target === this) closeResetModal();
+  });
+</script>

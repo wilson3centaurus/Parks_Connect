@@ -967,3 +967,5 @@ label {
     min-height: 220px;
   }
 }
+
+.auth-help-text { font-size: 0.8rem; color: var(--text-muted, rgba(255,255,255,0.4)); text-align: center; margin-top: 1rem; }

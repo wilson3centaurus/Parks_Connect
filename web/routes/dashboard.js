@@ -640,9 +640,34 @@ router.get('/reports/:reportType/pdf', ensureAuth, ensurePortalAccess, async (re
   }
 });
 
+// ── User Management (admin-only) ─────────────────────────────────────────────
+
+router.get('/users', ensureAuth, ensurePortalAccess, async (req, res) => {
+  if (req.session.user.role !== 'authority_admin') return res.status(403).render('error', { message: 'Forbidden' });
+  try {
+    const [users, parks] = await Promise.all([
+      fetchWithAuth('/api/auth/users', req.session.token).catch(() => []),
+      fetchWithAuth('/api/parks', req.session.token).catch(() => [])
+    ]);
+    return res.render('users', {
+      user: req.session.user,
+      section: 'users',
+      topbarDateRange: '',
+      showFiltersButton: false,
+      notificationCount: 0,
+      users,
+      parks,
+      success: req.query.success || null,
+      error: req.query.error || null
+    });
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).render('error', { message: 'Unable to load users' });
+  }
+});
+
 router.post('/users', ensureAuth, ensurePortalAccess, async (req, res) => {
   if (req.session.user.role !== 'authority_admin') return res.status(403).render('error', { message: 'Forbidden' });
-
   try {
     await axios.post(
       `${backendUrl}/api/auth/register`,
@@ -655,11 +680,57 @@ router.post('/users', ensureAuth, ensurePortalAccess, async (req, res) => {
       },
       { headers: { Authorization: `Bearer ${req.session.token}` } }
     );
-
-    res.redirect(buildDashboardUrl(req.portal, req.body.park_id));
+    res.redirect('/dashboard/users?success=Account+created+successfully');
   } catch (err) {
     console.error(err.response?.data || err.message);
-    res.status(400).render('error', { message: 'Failed to create user' });
+    const msg = err.response?.data?.message || 'Failed to create user';
+    res.redirect(`/dashboard/users?error=${encodeURIComponent(msg)}`);
+  }
+});
+
+router.post('/users/:id/reset-password', ensureAuth, ensurePortalAccess, async (req, res) => {
+  if (req.session.user.role !== 'authority_admin') return res.status(403).render('error', { message: 'Forbidden' });
+  try {
+    await axios.post(
+      `${backendUrl}/api/auth/users/${req.params.id}/reset-password`,
+      { new_password: req.body.new_password },
+      { headers: { Authorization: `Bearer ${req.session.token}` } }
+    );
+    res.redirect('/dashboard/users?success=Password+reset+successfully');
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    const msg = err.response?.data?.message || 'Failed to reset password';
+    res.redirect(`/dashboard/users?error=${encodeURIComponent(msg)}`);
+  }
+});
+
+router.post('/users/:id/delete', ensureAuth, ensurePortalAccess, async (req, res) => {
+  if (req.session.user.role !== 'authority_admin') return res.status(403).render('error', { message: 'Forbidden' });
+  try {
+    await axios.delete(
+      `${backendUrl}/api/auth/users/${req.params.id}`,
+      { headers: { Authorization: `Bearer ${req.session.token}` } }
+    );
+    res.redirect('/dashboard/users?success=User+removed');
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    const msg = err.response?.data?.message || 'Failed to delete user';
+    res.redirect(`/dashboard/users?error=${encodeURIComponent(msg)}`);
+  }
+});
+
+router.post('/change-password', ensureAuth, async (req, res) => {
+  try {
+    await axios.post(
+      `${backendUrl}/api/auth/change-password`,
+      { current_password: req.body.current_password, new_password: req.body.new_password },
+      { headers: { Authorization: `Bearer ${req.session.token}` } }
+    );
+    res.redirect('/dashboard?success=Password+updated');
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    const msg = err.response?.data?.message || 'Failed to update password';
+    res.redirect(`/dashboard?error=${encodeURIComponent(msg)}`);
   }
 });
 

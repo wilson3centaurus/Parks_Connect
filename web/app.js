@@ -80,7 +80,17 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/', (_req, res) => res.redirect('/dashboard'));
+app.get('/', async (req, res) => {
+  if (req.session?.user) return res.redirect('/dashboard');
+  try {
+    const { default: axios } = await import('axios');
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+    const parks = await axios.get(`${backendUrl}/api/parks`).then((r) => r.data).catch(() => []);
+    return res.render('home', { layout: false, parks });
+  } catch {
+    return res.render('home', { layout: false, parks: [] });
+  }
+});
 
 app.use('/', publicRoutes);
 app.use('/', authRoutes);

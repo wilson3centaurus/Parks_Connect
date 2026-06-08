@@ -276,7 +276,8 @@ export async function listFeedback(req, res) {
 
   const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
   const allowedSort = new Set(['visit_date', 'submitted_at', 'rating', 'category', 'channel', 'park_name']);
-  const sortBy = allowedSort.has(String(req.query.sort_by || 'submitted_at')) ? String(req.query.sort_by) : 'submitted_at';
+  const rawSort = String(req.query.sort_by || 'submitted_at');
+  const sortBy = allowedSort.has(rawSort) ? rawSort : 'submitted_at';
   const sortDirection = String(req.query.sort_dir || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
   const page = Math.max(Number(req.query.page || 1), 1);
   const pageSize = Math.min(Math.max(Number(req.query.page_size || 20), 1), 100);
