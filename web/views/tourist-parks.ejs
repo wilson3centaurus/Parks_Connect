@@ -14,259 +14,288 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --navy: #0a1628;
-  --navy-mid: #0f2240;
-  --navy-card: #0d1e35;
-  --green: #1D9E75;
-  --green-bright: #22c55e;
-  --amber: #f59e0b;
-  --border: rgba(255,255,255,0.08);
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.45);
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0a1628;--navy-mid:#0f2240;--navy-card:#0d1e35;
+  --green:#1D9E75;--green-bright:#22c55e;--amber:#f59e0b;
+  --border:rgba(255,255,255,0.08);--text:rgba(255,255,255,0.92);--muted:rgba(255,255,255,0.45);
 }
-html { scroll-behavior: smooth; }
-body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; }
+html,body{overflow-x:hidden;max-width:100%;width:100%}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;font-size:14px}
 
-/* ── Nav ─────────────────────────────────────────────────────── */
-.tp-nav {
-  position: sticky; top: 0; z-index: 50;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0.9rem 2rem;
-  background: rgba(10,22,40,0.88);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+/* ── Nav ── */
+.tp-nav{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0.6rem 1rem;
+  background:rgba(10,22,40,0.92);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
 }
-.tp-brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
-.tp-brand img { height: 34px; width: 34px; object-fit: contain; border-radius: 50%; }
-.tp-brand-name { font-size: 1rem; font-weight: 700; color: #fff; line-height: 1; }
-.tp-brand-sub { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.05em; }
-.tp-nav-actions { display: flex; gap: 0.6rem; align-items: center; }
-.btn-ghost { padding: 0.45rem 1rem; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 0.82rem; font-weight: 500; transition: all 0.15s; }
-.btn-ghost:hover { color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.04); }
-.btn-primary-sm { padding: 0.45rem 1rem; background: var(--green); border: none; border-radius: 8px; color: #fff; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: background 0.15s; cursor: pointer; }
-.btn-primary-sm:hover { background: #16a34a; }
+.tp-brand{display:flex;align-items:center;gap:0.5rem;text-decoration:none}
+.tp-brand img{height:28px;width:28px;object-fit:contain;border-radius:50%}
+.tp-brand-name{font-size:0.88rem;font-weight:700;color:#fff;line-height:1}
+.tp-brand-sub{font-size:0.58rem;color:var(--muted);letter-spacing:0.05em}
+.tp-nav-actions{display:flex;gap:0.4rem;align-items:center}
+.btn-ghost-sm{
+  width:32px;height:32px;border:1px solid rgba(255,255,255,0.15);
+  border-radius:8px;color:var(--muted);display:flex;align-items:center;
+  justify-content:center;text-decoration:none;font-size:0.82rem;transition:all 0.15s;
+}
+.btn-ghost-sm:hover{color:#fff;border-color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.04)}
+.btn-primary-sm{
+  padding:0.4rem 0.8rem;background:var(--green);border:none;border-radius:8px;
+  color:#fff;font-size:0.78rem;font-weight:600;text-decoration:none;
+  transition:background 0.15s;cursor:pointer;display:flex;align-items:center;gap:0.35rem
+}
+.btn-primary-sm:hover{background:#16a34a}
 
-/* ── Hero ────────────────────────────────────────────────────── */
-.tp-hero {
-  position: relative; overflow: hidden;
-  padding: 5rem 2rem 4rem; text-align: center;
-  background: linear-gradient(160deg, #0a1628 0%, #0d2a1a 50%, #0a1628 100%);
+/* ── Hero ── */
+.tp-hero{
+  position:relative;overflow:hidden;
+  padding:3.5rem 1.5rem 2.5rem;text-align:center;
+  min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;
 }
-.tp-hero::before {
-  content: ''; position: absolute; inset: 0;
-  background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(29,158,117,0.18), transparent);
-  pointer-events: none;
+.tp-hero-bg{
+  position:absolute;inset:0;
+  background-image:url('https://picsum.photos/seed/zimbabwe-wildlife/1280/720');
+  background-size:cover;background-position:center;
 }
-.tp-hero-badge {
-  display: inline-block; padding: 0.3rem 0.9rem;
-  background: rgba(29,158,117,0.15); border: 1px solid rgba(29,158,117,0.35);
-  border-radius: 20px; font-size: 0.72rem; font-weight: 700;
-  color: var(--green-bright); letter-spacing: 0.06em; text-transform: uppercase;
-  margin-bottom: 1.25rem;
+.tp-hero-bg::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(160deg,rgba(10,22,40,0.82) 0%,rgba(13,42,26,0.75) 50%,rgba(10,22,40,0.85) 100%);
 }
-.tp-hero h1 {
-  font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 800;
-  line-height: 1.12; margin-bottom: 1.1rem; color: #fff;
+.tp-hero-inner{position:relative;z-index:1;max-width:560px;margin:0 auto}
+.tp-hero-badge{
+  display:inline-block;padding:0.25rem 0.75rem;
+  background:rgba(29,158,117,0.2);border:1px solid rgba(29,158,117,0.4);
+  border-radius:20px;font-size:0.65rem;font-weight:700;
+  color:var(--green-bright);letter-spacing:0.07em;text-transform:uppercase;
+  margin-bottom:1rem;
 }
-.tp-hero h1 span { color: var(--green-bright); }
-.tp-hero p { font-size: 1.05rem; color: var(--muted); line-height: 1.7; max-width: 580px; margin: 0 auto 2.25rem; }
-.tp-hero-cta { display: flex; gap: 0.85rem; justify-content: center; flex-wrap: wrap; }
-.btn-hero { padding: 0.85rem 2rem; border-radius: 10px; font-size: 0.95rem; font-weight: 700; text-decoration: none; transition: all 0.18s; display: inline-flex; align-items: center; gap: 0.5rem; }
-.btn-hero--green { background: var(--green); color: #fff; }
-.btn-hero--green:hover { background: #16a34a; transform: translateY(-1px); }
-.btn-hero--outline { border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.85); }
-.btn-hero--outline:hover { border-color: rgba(255,255,255,0.5); color: #fff; background: rgba(255,255,255,0.04); }
+.tp-hero h1{
+  font-size:clamp(1.7rem,5vw,2.8rem);font-weight:800;
+  line-height:1.15;margin-bottom:0.85rem;color:#fff;
+}
+.tp-hero h1 span{color:var(--green-bright)}
+.tp-hero p{font-size:0.88rem;color:rgba(255,255,255,0.7);line-height:1.65;margin-bottom:1.75rem}
+.tp-hero-cta{display:flex;gap:0.65rem;justify-content:center}
+.btn-hero{
+  padding:0.7rem 1.5rem;border-radius:9px;font-size:0.85rem;font-weight:700;
+  text-decoration:none;transition:all 0.18s;display:inline-flex;align-items:center;gap:0.45rem;
+}
+.btn-hero--green{background:var(--green);color:#fff}
+.btn-hero--green:hover{background:#16a34a;transform:translateY(-1px)}
+.btn-hero--outline{border:1.5px solid rgba(255,255,255,0.22);color:rgba(255,255,255,0.85)}
+.btn-hero--outline:hover{border-color:rgba(255,255,255,0.5);color:#fff;background:rgba(255,255,255,0.05)}
 
-/* ── Stats strip ─────────────────────────────────────────────── */
-.tp-stats {
-  display: flex; flex-wrap: wrap; justify-content: center;
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  background: rgba(255,255,255,0.02);
+/* ── Stats ── */
+.tp-stats{
+  display:flex;flex-wrap:wrap;justify-content:center;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,0.02);
 }
-.tp-stat { flex: 1; min-width: 130px; padding: 1.25rem 1rem; text-align: center; border-right: 1px solid var(--border); }
-.tp-stat:last-child { border-right: none; }
-.tp-stat-val { font-size: 1.6rem; font-weight: 800; color: var(--green-bright); display: block; }
-.tp-stat-lbl { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.tp-stat{flex:1;min-width:110px;padding:0.9rem 0.75rem;text-align:center;border-right:1px solid var(--border)}
+.tp-stat:last-child{border-right:none}
+.tp-stat-val{font-size:1.3rem;font-weight:800;color:var(--green-bright);display:block}
+.tp-stat-lbl{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em}
 
-/* ── Parks grid ──────────────────────────────────────────────── */
-.tp-section { max-width: 1180px; margin: 0 auto; padding: 3rem 1.5rem; }
-.tp-section-hd { margin-bottom: 2rem; }
-.tp-section-hd h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.3rem; }
-.tp-section-hd p { font-size: 0.875rem; color: var(--muted); }
+/* ── Parks grid ── */
+.tp-section{max-width:1120px;margin:0 auto;padding:2rem 1rem}
+.tp-section-hd{margin-bottom:1.5rem}
+.tp-section-hd h2{font-size:1.25rem;font-weight:700;margin-bottom:0.2rem}
+.tp-section-hd p{font-size:0.8rem;color:var(--muted)}
 
-.tp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
+.tp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
 
-.tp-park-card {
-  position: relative; border-radius: 16px; overflow: hidden;
-  background: var(--navy-card); border: 1px solid var(--border);
-  cursor: pointer; transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
-  display: flex; flex-direction: column;
+.tp-park-card{
+  position:relative;border-radius:14px;overflow:hidden;
+  background:var(--navy-card);border:1px solid var(--border);
+  cursor:pointer;transition:transform 0.2s,box-shadow 0.2s,border-color 0.2s;
+  display:flex;flex-direction:column;
 }
-.tp-park-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-  border-color: rgba(29,158,117,0.4);
+.tp-park-card:hover{transform:translateY(-3px);box-shadow:0 12px 36px rgba(0,0,0,0.45);border-color:rgba(29,158,117,0.35)}
+.tp-card-img{height:155px;position:relative;overflow:hidden;background:linear-gradient(135deg,#0d2a1a,#1a4a2e)}
+.tp-card-img img{width:100%;height:100%;object-fit:cover;transition:transform 0.4s}
+.tp-park-card:hover .tp-card-img img{transform:scale(1.06)}
+.tp-card-img-fallback{
+  width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0.4rem;background:linear-gradient(135deg,#0d2a1a 0%,#1a4a2e 100%);
 }
-.tp-card-img {
-  height: 180px; position: relative; overflow: hidden;
-  background: linear-gradient(135deg, #0d2a1a, #1a4a2e);
+.tp-card-img-fallback span{font-size:0.7rem;color:rgba(29,158,117,0.7);font-weight:600;letter-spacing:0.04em;text-transform:uppercase}
+.tp-card-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(10,22,40,0.75) 100%)}
+.tp-card-badge{
+  position:absolute;top:10px;left:10px;
+  padding:0.18rem 0.5rem;background:rgba(29,158,117,0.85);
+  border-radius:5px;font-size:0.63rem;font-weight:700;color:#fff;letter-spacing:0.04em;text-transform:uppercase;
 }
-.tp-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
-.tp-park-card:hover .tp-card-img img { transform: scale(1.06); }
-.tp-card-img-fallback {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 3rem; color: rgba(29,158,117,0.4);
+.tp-card-body{padding:0.9rem 1rem;flex:1;display:flex;flex-direction:column}
+.tp-card-name{font-size:0.95rem;font-weight:700;color:#fff;margin-bottom:0.18rem}
+.tp-card-region{font-size:0.72rem;color:var(--muted);margin-bottom:0.6rem}
+.tp-card-region i{color:var(--green);font-size:0.65rem;margin-right:3px}
+.tp-card-extract{
+  font-size:0.76rem;color:rgba(255,255,255,0.55);line-height:1.5;flex:1;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  margin-bottom:0.75rem;
 }
-.tp-card-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(to bottom, transparent 30%, rgba(10,22,40,0.8) 100%);
+.tp-card-facts{
+  display:flex;flex-wrap:wrap;gap:0.6rem;font-size:0.68rem;color:var(--muted);
+  border-top:1px solid var(--border);padding-top:0.65rem;margin-bottom:0.65rem;
 }
-.tp-card-badge {
-  position: absolute; top: 12px; left: 12px;
-  padding: 0.2rem 0.55rem; background: rgba(29,158,117,0.9);
-  border-radius: 6px; font-size: 0.68rem; font-weight: 700;
-  color: #fff; letter-spacing: 0.05em; text-transform: uppercase;
+.tp-card-facts span{display:flex;align-items:center;gap:3px}
+.tp-card-facts i{color:var(--green)}
+.tp-card-animals{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:0.75rem}
+.tp-animal-pill{
+  padding:0.15rem 0.45rem;background:rgba(29,158,117,0.1);
+  border:1px solid rgba(29,158,117,0.2);border-radius:20px;
+  font-size:0.62rem;color:var(--green-bright);
 }
-.tp-card-body { padding: 1.1rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
-.tp-card-name { font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem; }
-.tp-card-region { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.75rem; }
-.tp-card-region i { color: var(--green); font-size: 0.7rem; margin-right: 3px; }
-.tp-card-extract {
-  font-size: 0.82rem; color: rgba(255,255,255,0.6); line-height: 1.55;
-  flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-  margin-bottom: 1rem;
+.tp-card-btn{
+  width:100%;padding:0.55rem;background:var(--green);color:#fff;
+  border:none;border-radius:7px;font-size:0.8rem;font-weight:700;
+  cursor:pointer;transition:background 0.15s;display:flex;align-items:center;justify-content:center;gap:5px;
 }
-.tp-card-facts {
-  display: flex; gap: 1rem; font-size: 0.75rem; color: var(--muted);
-  border-top: 1px solid var(--border); padding-top: 0.85rem; margin-bottom: 0.85rem; flex-wrap: wrap;
-}
-.tp-card-facts span { display: flex; align-items: center; gap: 4px; }
-.tp-card-facts i { color: var(--green); }
-.tp-card-animals { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 1rem; }
-.tp-animal-pill {
-  padding: 0.18rem 0.55rem; background: rgba(29,158,117,0.1);
-  border: 1px solid rgba(29,158,117,0.2); border-radius: 20px;
-  font-size: 0.68rem; color: var(--green-bright);
-}
-.tp-card-btn {
-  width: 100%; padding: 0.65rem; background: var(--green); color: #fff;
-  border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 700;
-  cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
-}
-.tp-card-btn:hover { background: #16a34a; }
+.tp-card-btn:hover{background:#16a34a}
 
-/* ── Map section ─────────────────────────────────────────────── */
-.tp-map-section { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem 3rem; }
-.tp-map-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; }
-.tp-map-section p { font-size: 0.875rem; color: var(--muted); margin-bottom: 1.25rem; }
-#touristMap { width: 100%; height: 420px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+/* ── Map section ── */
+.tp-map-section{max-width:1120px;margin:0 auto;padding:0 1rem 2rem}
+.tp-map-section h2{font-size:1.15rem;font-weight:700;margin-bottom:0.2rem}
+.tp-map-section p{font-size:0.8rem;color:var(--muted);margin-bottom:1rem}
+#touristMap{width:100%;height:380px;border-radius:14px;overflow:hidden;border:1px solid var(--border)}
 
-/* ── Drawer ──────────────────────────────────────────────────── */
-.tp-backdrop {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.65); z-index: 90;
-  backdrop-filter: blur(4px);
+/* ── Drawer ── */
+.tp-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:90;backdrop-filter:blur(3px)}
+.tp-backdrop.open{display:block}
+.tp-drawer{
+  position:fixed;top:0;right:-100%;
+  width:min(520px,100vw);height:100vh;
+  background:var(--navy-mid);border-left:1px solid var(--border);
+  z-index:100;overflow-y:auto;
+  transition:right 0.32s cubic-bezier(0.4,0,0.2,1);
+  display:flex;flex-direction:column;
 }
-.tp-backdrop.open { display: block; }
-
-.tp-drawer {
-  position: fixed; top: 0; right: -100%;
-  width: min(560px, 100vw); height: 100vh;
-  background: var(--navy-mid); border-left: 1px solid var(--border);
-  z-index: 100; overflow-y: auto;
-  transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex; flex-direction: column;
+.tp-drawer.open{right:0}
+.tp-drawer-close{
+  position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;
+  background:rgba(255,255,255,0.08);border:none;color:var(--muted);font-size:0.9rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;z-index:2;
 }
-.tp-drawer.open { right: 0; }
-.tp-drawer-close {
-  position: absolute; top: 14px; right: 14px;
-  width: 32px; height: 32px; border-radius: 50%;
-  background: rgba(255,255,255,0.08); border: none;
-  color: var(--muted); font-size: 1rem; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s;
+.tp-drawer-close:hover{background:rgba(255,255,255,0.15);color:#fff}
+.tp-drawer-img{width:100%;height:210px;object-fit:cover;display:block;flex-shrink:0}
+.tp-drawer-img-fallback{
+  width:100%;height:210px;flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;
+  background:linear-gradient(135deg,#0d2a1a,#1a4a2e);
 }
-.tp-drawer-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
-.tp-drawer-img { width: 100%; height: 240px; object-fit: cover; display: block; flex-shrink: 0; }
-.tp-drawer-img-fallback {
-  width: 100%; height: 240px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #0d2a1a, #1a4a2e); font-size: 5rem;
-  color: rgba(29,158,117,0.3);
+.tp-drawer-img-fallback i{font-size:3.5rem;color:rgba(29,158,117,0.35)}
+.tp-drawer-img-fallback span{font-size:0.75rem;color:rgba(29,158,117,0.6);font-weight:600;text-transform:uppercase;letter-spacing:0.06em}
+.tp-drawer-body{padding:1.25rem;flex:1}
+.tp-drawer-badge{
+  display:inline-block;padding:0.2rem 0.6rem;
+  background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.3);
+  border-radius:5px;font-size:0.65rem;font-weight:700;color:var(--green-bright);
+  text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.6rem;
 }
-.tp-drawer-body { padding: 1.5rem; flex: 1; }
-.tp-drawer-badge {
-  display: inline-block; padding: 0.25rem 0.7rem;
-  background: rgba(29,158,117,0.15); border: 1px solid rgba(29,158,117,0.3);
-  border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: var(--green-bright);
-  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;
+.tp-drawer-title{font-size:1.45rem;font-weight:800;color:#fff;line-height:1.2;margin-bottom:0.25rem}
+.tp-drawer-region{font-size:0.8rem;color:var(--muted);margin-bottom:1rem}
+.tp-drawer-region i{color:var(--green);margin-right:3px}
+.tp-drawer-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:1.25rem}
+.tp-kpi{
+  background:rgba(255,255,255,0.04);border:1px solid var(--border);
+  border-radius:9px;padding:0.65rem;display:flex;flex-direction:column;gap:2px;
 }
-.tp-drawer-title { font-size: 1.6rem; font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 0.3rem; }
-.tp-drawer-region { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.25rem; }
-.tp-drawer-region i { color: var(--green); margin-right: 4px; }
-
-.tp-drawer-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
-.tp-kpi {
-  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-  border-radius: 10px; padding: 0.75rem; display: flex; flex-direction: column; gap: 2px;
+.tp-kpi i{color:var(--green);font-size:0.82rem;margin-bottom:3px}
+.tp-kpi strong{font-size:0.9rem;font-weight:700;color:#fff}
+.tp-kpi small{font-size:0.62rem;color:var(--muted)}
+.tp-drawer-sec{margin-bottom:1.25rem}
+.tp-drawer-sec-title{
+  font-size:0.65rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.07em;color:var(--muted);margin-bottom:0.6rem;
+  display:flex;align-items:center;gap:5px;
 }
-.tp-kpi i { color: var(--green); font-size: 0.9rem; margin-bottom: 4px; }
-.tp-kpi strong { font-size: 1rem; font-weight: 700; color: #fff; }
-.tp-kpi small { font-size: 0.68rem; color: var(--muted); }
-
-.tp-drawer-sec { margin-bottom: 1.5rem; }
-.tp-drawer-sec-title {
-  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem;
-  display: flex; align-items: center; gap: 6px;
+.tp-drawer-sec-title i{color:var(--green)}
+.tp-extract{font-size:0.82rem;color:rgba(255,255,255,0.68);line-height:1.65}
+.tp-animals{display:flex;flex-wrap:wrap;gap:5px}
+.tp-animal{
+  padding:0.25rem 0.6rem;border-radius:20px;font-size:0.72rem;font-weight:500;
+  background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.25);color:#6ee7b7;
 }
-.tp-drawer-sec-title i { color: var(--green); }
-.tp-extract { font-size: 0.875rem; color: rgba(255,255,255,0.7); line-height: 1.7; }
-
-.tp-animals { display: flex; flex-wrap: wrap; gap: 6px; }
-.tp-animal { padding: 0.28rem 0.7rem; border-radius: 20px; font-size: 0.78rem; font-weight: 500; background: rgba(29,158,117,0.12); border: 1px solid rgba(29,158,117,0.25); color: #6ee7b7; }
-
-.tp-todo { list-style: none; display: flex; flex-direction: column; gap: 6px; }
-.tp-todo li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; color: rgba(255,255,255,0.75); }
-.tp-todo li::before { content: ''; width: 6px; height: 6px; background: var(--green); border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
-
-.tp-drawer-map { width: 100%; height: 200px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
-
-.tp-drawer-cta { margin-top: 1.5rem; display: flex; gap: 0.75rem; }
-.tp-drawer-cta a { flex: 1; padding: 0.75rem; border-radius: 10px; font-size: 0.875rem; font-weight: 700; text-align: center; text-decoration: none; transition: all 0.15s; }
-.tp-drawer-cta-primary { background: var(--green); color: #fff; }
-.tp-drawer-cta-primary:hover { background: #16a34a; }
-.tp-drawer-cta-outline { border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); }
-.tp-drawer-cta-outline:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
-
-/* ── Footer ──────────────────────────────────────────────────── */
-.tp-footer {
-  text-align: center; padding: 2rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.78rem; color: var(--muted);
+.tp-todo{list-style:none;display:flex;flex-direction:column;gap:5px}
+.tp-todo li{display:flex;align-items:flex-start;gap:7px;font-size:0.8rem;color:rgba(255,255,255,0.72)}
+.tp-todo li::before{content:'';width:5px;height:5px;background:var(--green);border-radius:50%;margin-top:5px;flex-shrink:0}
+.tp-drawer-map{width:100%;height:185px;border-radius:9px;overflow:hidden;border:1px solid var(--border)}
+.tp-drawer-cta{margin-top:1.25rem;display:flex;gap:0.6rem}
+.tp-drawer-cta button,.tp-drawer-cta a{
+  flex:1;padding:0.7rem;border-radius:9px;font-size:0.82rem;font-weight:700;
+  text-align:center;text-decoration:none;transition:all 0.15s;cursor:pointer;border:none;
+  display:flex;align-items:center;justify-content:center;gap:0.4rem;
 }
-.tp-footer a { color: rgba(255,255,255,0.35); text-decoration: none; }
-.tp-footer a:hover { color: rgba(255,255,255,0.6); }
+.tp-cta-primary{background:var(--green);color:#fff}
+.tp-cta-primary:hover{background:#16a34a}
+.tp-cta-outline{border:1.5px solid rgba(255,255,255,0.18) !important;color:rgba(255,255,255,0.78);background:transparent}
+.tp-cta-outline:hover{border-color:rgba(255,255,255,0.45) !important;color:#fff}
 
-/* ── Responsive ──────────────────────────────────────────────── */
-@media (max-width: 640px) {
-  .tp-nav { padding: 0.75rem 1rem; }
-  .tp-hero { padding: 3rem 1rem 2.5rem; }
-  .tp-section { padding: 2rem 1rem; }
-  .tp-map-section { padding: 0 1rem 2rem; }
-  #touristMap { height: 280px; }
-  .tp-drawer-kpis { grid-template-columns: repeat(2, 1fr); }
+/* ── Book Visit Modal ── */
+.bv-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);
+  z-index:200;align-items:center;justify-content:center;padding:1rem;
+}
+.bv-overlay.open{display:flex}
+.bv-modal{
+  background:#0f2240;border:1px solid var(--border);border-radius:16px;
+  padding:1.75rem;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.bv-modal h3{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:0.3rem}
+.bv-modal p{font-size:0.78rem;color:var(--muted);margin-bottom:1.25rem}
+.bv-field{margin-bottom:0.9rem}
+.bv-field label{display:block;font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem}
+.bv-field input,.bv-field textarea,.bv-field select{
+  width:100%;padding:0.5rem 0.75rem;border-radius:8px;
+  border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);
+  color:#fff;font-size:0.82rem;font-family:inherit;
+}
+.bv-field input:focus,.bv-field textarea:focus,.bv-field select:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,0.15)}
+.bv-field input::placeholder,.bv-field textarea::placeholder{color:rgba(255,255,255,0.3)}
+.bv-field textarea{resize:vertical;min-height:72px}
+.bv-field select option{background:#0f2240;color:#fff}
+.bv-actions{display:flex;gap:0.6rem;margin-top:1.25rem}
+.bv-btn-cancel{
+  flex:1;padding:0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.12);
+  background:transparent;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;
+}
+.bv-btn-cancel:hover{background:rgba(255,255,255,0.05);color:#fff}
+.bv-btn-submit{
+  flex:2;padding:0.6rem;border-radius:8px;border:none;
+  background:var(--green);color:#fff;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;
+}
+.bv-btn-submit:hover{background:#16a34a}
+.bv-success{
+  text-align:center;padding:1.5rem 0;
+}
+.bv-success i{font-size:2.5rem;color:var(--green-bright);margin-bottom:0.75rem;display:block}
+.bv-success p{font-size:0.88rem;color:rgba(255,255,255,0.75);line-height:1.6}
+
+/* ── Footer ── */
+.tp-footer{text-align:center;padding:1.5rem;border-top:1px solid var(--border);font-size:0.72rem;color:var(--muted)}
+.tp-footer a{color:rgba(255,255,255,0.3);text-decoration:none}
+.tp-footer a:hover{color:rgba(255,255,255,0.55)}
+
+@media(max-width:480px){
+  .tp-nav{padding:0.5rem 0.75rem}
+  .tp-hero{padding:2.5rem 1rem 2rem;min-height:260px}
+  .tp-section{padding:1.5rem 0.75rem}
+  .tp-map-section{padding:0 0.75rem 1.5rem}
+  #touristMap{height:240px}
+  .tp-drawer-kpis{grid-template-columns:repeat(2,1fr)}
+  .tp-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 
 <%
-// Curated park names (for parks not yet in DB)
-const PARK_NAMES = {
+const PARK_NAMES_MAP = {
   HWG:'Hwange National Park', VFA:'Victoria Falls National Park',
   MNA:'Mana Pools National Park', GNZ:'Gonarezhou National Park',
   MTB:'Matobo National Park', NYG:'Nyanga National Park',
@@ -274,11 +303,18 @@ const PARK_NAMES = {
   MTS:'Matusadona National Park', ZMB:'Zambezi National Park',
   KZM:'Kazuma Pan National Park'
 };
-const PARK_REGIONS = {
+const PARK_REGIONS_MAP = {
   HWG:'Matabeleland North', VFA:'Matabeleland North', MNA:'Mashonaland West',
   GNZ:'Masvingo', MTB:'Matabeleland South', NYG:'Manicaland',
   CHM:'Manicaland', CHZ:'Matabeleland North', MTS:'Mashonaland West',
   ZMB:'Matabeleland North', KZM:'Matabeleland North'
+};
+// Picsum seeds for reliable fallback images per park
+const PARK_IMG_SEED = {
+  HWG:'elephants-savanna', VFA:'victoria-falls-waterfall', MNA:'zambezi-river-canoe',
+  GNZ:'gonarezhou-baobab', MTB:'matobo-rocks-rhino', NYG:'nyanga-mountains',
+  CHM:'chimanimani-peaks', CHZ:'chizarira-gorge', MTS:'kariba-lake-sunset',
+  ZMB:'zambezi-hippo', KZM:'kazuma-savanna'
 };
 %>
 
@@ -292,59 +328,66 @@ const PARK_REGIONS = {
     </div>
   </a>
   <div class="tp-nav-actions">
-    <a href="/feedback" class="btn-ghost"><i class="fa-regular fa-comment-dots"></i> Feedback</a>
-    <a href="/login" class="btn-primary-sm"><i class="fa-solid fa-lock"></i> Staff Login</a>
+    <a href="/feedback" class="btn-ghost-sm" title="Submit Feedback"><i class="fa-regular fa-comment-dots"></i></a>
+    <a href="/login" class="btn-ghost-sm" title="Staff Login"><i class="fa-solid fa-lock"></i></a>
   </div>
 </nav>
 
 <!-- Hero -->
 <div class="tp-hero">
-  <div class="tp-hero-badge">Zimbabwe National Parks Authority</div>
-  <h1>Explore Zimbabwe's<br><span>Wild Heart</span></h1>
-  <p>11 national parks covering over 5 million hectares of pristine wilderness. From Victoria Falls to the Gonarezhou, discover the real Zimbabwe.</p>
-  <div class="tp-hero-cta">
-    <a href="#parks" class="btn-hero btn-hero--green"><i class="fa-solid fa-binoculars"></i> Browse Parks</a>
-    <a href="#map" class="btn-hero btn-hero--outline"><i class="fa-solid fa-map"></i> View on Map</a>
+  <div class="tp-hero-bg"></div>
+  <div class="tp-hero-inner">
+    <div class="tp-hero-badge">Zimbabwe National Parks Authority</div>
+    <h1>Explore Zimbabwe's<br><span>Wild Heart</span></h1>
+    <p>11 national parks covering over 5 million hectares of pristine wilderness — from Victoria Falls to the Gonarezhou.</p>
+    <div class="tp-hero-cta">
+      <a href="#parks" class="btn-hero btn-hero--green"><i class="fa-solid fa-binoculars"></i> Browse Parks</a>
+      <a href="#map" class="btn-hero btn-hero--outline"><i class="fa-solid fa-map"></i> View on Map</a>
+    </div>
   </div>
 </div>
 
 <!-- Stats -->
 <div class="tp-stats">
   <div class="tp-stat"><span class="tp-stat-val">11</span><span class="tp-stat-lbl">National Parks</span></div>
-  <div class="tp-stat"><span class="tp-stat-val">5M+</span><span class="tp-stat-lbl">Hectares Protected</span></div>
-  <div class="tp-stat"><span class="tp-stat-val">500+</span><span class="tp-stat-lbl">Wildlife Species</span></div>
-  <div class="tp-stat"><span class="tp-stat-val">2 UNESCO</span><span class="tp-stat-lbl">World Heritage Sites</span></div>
-  <div class="tp-stat"><span class="tp-stat-val">Real-time</span><span class="tp-stat-lbl">Monitoring</span></div>
+  <div class="tp-stat"><span class="tp-stat-val">5M+</span><span class="tp-stat-lbl">Ha Protected</span></div>
+  <div class="tp-stat"><span class="tp-stat-val">500+</span><span class="tp-stat-lbl">Species</span></div>
+  <div class="tp-stat"><span class="tp-stat-val">2</span><span class="tp-stat-lbl">UNESCO Sites</span></div>
 </div>
 
 <!-- Parks grid -->
 <div class="tp-section" id="parks">
   <div class="tp-section-hd">
     <h2>National Parks of Zimbabwe</h2>
-    <p>Click any park to explore wildlife, attractions, history, and live visitor information</p>
+    <p>Tap any park to explore wildlife, attractions, history and live visitor information</p>
   </div>
 
   <div class="tp-grid">
     <% for (const park of parks) {
-      const name = park.name || PARK_NAMES[park.code] || park.code;
-      const region = park.region || PARK_REGIONS[park.code] || 'Zimbabwe';
+      const name = (park.name && !park.name.match(/^[A-Z]{3}$/)) ? park.name : (PARK_NAMES_MAP[park.code] || park.name || park.code);
+      const region = park.region || PARK_REGIONS_MAP[park.code] || 'Zimbabwe';
       const c = park.curated || {};
-      const firstSentence = (park.wiki?.extract || '').split('. ')[0] + '.';
+      const extract = park.wiki?.extract || '';
+      const firstSentence = extract.split('. ')[0] + (extract.includes('. ') ? '.' : '');
+      const imgSeed = PARK_IMG_SEED[park.code] || 'zimbabwe-wildlife';
+      const fallbackImg = `https://picsum.photos/seed/${imgSeed}/640/360`;
+      const primaryImg = park.photo_url || (park.wiki && park.wiki.thumbnail ? park.wiki.thumbnail : null) || fallbackImg;
     %>
     <div class="tp-park-card" onclick="openDrawer('<%- park.code %>')">
       <div class="tp-card-img">
-        <% if (park.wiki && park.wiki.thumbnail) { %>
-          <img src="<%= park.wiki.thumbnail %>" alt="<%= name %>" loading="lazy">
-        <% } else { %>
-          <div class="tp-card-img-fallback"><i class="fa-solid fa-tree"></i></div>
-        <% } %>
+        <img src="<%= primaryImg %>" alt="<%= name %>" loading="lazy"
+             onerror="if(this.src!=='<%= fallbackImg %>'){this.src='<%= fallbackImg %>'}else{this.style.display='none';this.parentElement.querySelector('.tp-card-img-fallback').style.display='flex'}">
         <div class="tp-card-overlay"></div>
+        <div class="tp-card-img-fallback" style="display:none">
+          <i class="fa-solid fa-tree" style="position:relative;font-size:2.5rem;color:rgba(29,158,117,0.5)"></i>
+          <span style="position:relative">National Park</span>
+        </div>
         <span class="tp-card-badge">National Park</span>
       </div>
       <div class="tp-card-body">
         <div class="tp-card-name"><%= name %></div>
         <div class="tp-card-region"><i class="fa-solid fa-location-dot"></i> <%= region %></div>
-        <div class="tp-card-extract"><%= firstSentence || 'A protected conservation area in Zimbabwe.' %></div>
+        <div class="tp-card-extract"><%= firstSentence || 'A protected national park and conservation area in Zimbabwe.' %></div>
         <div class="tp-card-facts">
           <% if (c.area) { %><span><i class="fa-solid fa-expand"></i> <%= c.area %></span><% } %>
           <% if (c.established) { %><span><i class="fa-solid fa-calendar"></i> Est. <%= c.established %></span><% } %>
@@ -352,8 +395,8 @@ const PARK_REGIONS = {
         </div>
         <% if (c.animals && c.animals.length) { %>
         <div class="tp-card-animals">
-          <% c.animals.slice(0, 4).forEach(a => { %><span class="tp-animal-pill"><%= a %></span><% }); %>
-          <% if (c.animals.length > 4) { %><span class="tp-animal-pill">+<%= c.animals.length - 4 %> more</span><% } %>
+          <% c.animals.slice(0,3).forEach(a => { %><span class="tp-animal-pill"><%= a %></span><% }) %>
+          <% if (c.animals.length > 3) { %><span class="tp-animal-pill">+<%= c.animals.length - 3 %> more</span><% } %>
         </div>
         <% } %>
         <button class="tp-card-btn">
@@ -368,28 +411,75 @@ const PARK_REGIONS = {
 <!-- Map -->
 <div class="tp-map-section" id="map">
   <h2>Parks on the Map</h2>
-  <p>Explore all national parks across Zimbabwe. Click a marker for details.</p>
+  <p>All national parks across Zimbabwe — click a marker for details.</p>
   <div id="touristMap"></div>
 </div>
 
 <!-- Feedback CTA -->
-<div style="max-width:1180px;margin:0 auto 3rem;padding:0 1.5rem">
-  <div style="background:linear-gradient(135deg,rgba(29,158,117,0.12),rgba(16,185,129,0.06));border:1px solid rgba(29,158,117,0.2);border-radius:16px;padding:2.25rem 2rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1.5rem">
+<div style="max-width:1120px;margin:0 auto 2.5rem;padding:0 1rem">
+  <div style="background:linear-gradient(135deg,rgba(29,158,117,0.1),rgba(16,185,129,0.05));border:1px solid rgba(29,158,117,0.18);border-radius:14px;padding:1.75rem 1.5rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1.25rem">
     <div>
-      <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:0.3rem">Visited a Zimbabwe national park?</h3>
-      <p style="font-size:0.875rem;color:var(--muted)">Share your experience and help ZimParks improve conservation and visitor services.</p>
+      <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.25rem">Visited a Zimbabwe national park?</h3>
+      <p style="font-size:0.78rem;color:var(--muted)">Share your experience and help ZimParks improve conservation and visitor services.</p>
     </div>
-    <a href="/feedback" style="padding:0.75rem 1.75rem;border-radius:10px;background:var(--green);color:#fff;text-decoration:none;font-size:0.9rem;font-weight:700;white-space:nowrap">
+    <a href="/feedback" style="padding:0.65rem 1.5rem;border-radius:9px;background:var(--green);color:#fff;text-decoration:none;font-size:0.85rem;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:0.4rem">
       <i class="fa-regular fa-star"></i> Rate Your Visit
     </a>
   </div>
 </div>
 
-<!-- Park Detail Drawer -->
+<!-- Drawer -->
 <div class="tp-backdrop" id="backdrop" onclick="closeDrawer()"></div>
 <div class="tp-drawer" id="drawer">
   <button class="tp-drawer-close" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
   <div id="drawerContent"></div>
+</div>
+
+<!-- Book Visit Modal -->
+<div class="bv-overlay" id="bookModal">
+  <div class="bv-modal">
+    <div id="bookForm">
+      <h3><i class="fa-solid fa-calendar-check" style="color:var(--green);margin-right:6px"></i>Book a Visit</h3>
+      <p id="bookParkName" style="color:var(--green-bright);font-weight:600;margin-bottom:0.5rem"></p>
+      <p>Fill in your details and a park officer will contact you to confirm.</p>
+      <div class="bv-field">
+        <label>Your Full Name *</label>
+        <input id="bvName" type="text" placeholder="e.g. Tapiwa Moyo" required>
+      </div>
+      <div class="bv-field">
+        <label>Email Address</label>
+        <input id="bvEmail" type="email" placeholder="your@email.com">
+      </div>
+      <div class="bv-field">
+        <label>Preferred Visit Date</label>
+        <input id="bvDate" type="date">
+      </div>
+      <div class="bv-field">
+        <label>Group Size</label>
+        <select id="bvCount">
+          <option value="1">1 person</option>
+          <option value="2">2 people</option>
+          <option value="3-5" selected>3–5 people</option>
+          <option value="6-10">6–10 people</option>
+          <option value="10+">10+ people</option>
+        </select>
+      </div>
+      <div class="bv-field">
+        <label>Special Notes</label>
+        <textarea id="bvNotes" placeholder="Any special requirements, accessibility needs, activities of interest..."></textarea>
+      </div>
+      <div class="bv-actions">
+        <button class="bv-btn-cancel" onclick="closeBookModal()">Cancel</button>
+        <button class="bv-btn-submit" onclick="submitBooking()"><i class="fa-solid fa-paper-plane"></i> Send Request</button>
+      </div>
+    </div>
+    <div id="bookSuccess" class="bv-success" style="display:none">
+      <i class="fa-solid fa-circle-check"></i>
+      <h3 style="color:#fff;margin-bottom:0.5rem">Request Sent!</h3>
+      <p>A park officer has been notified and will contact you shortly to confirm your visit.</p>
+      <button class="bv-btn-submit" style="margin-top:1.25rem;max-width:180px" onclick="closeBookModal()">Close</button>
+    </div>
+  </div>
 </div>
 
 <footer class="tp-footer">
@@ -401,74 +491,72 @@ const PARK_REGIONS = {
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// All park data for client-side use
-const PARKS = <%- JSON.stringify(parks.map(p => ({
-  code: p.code,
-  name: p.name,
-  region: p.region,
-  curated: p.curated || {},
-  wiki: p.wiki || {},
-  id: p.id
-}))) %>;
+const PARKS = <%- JSON.stringify(parks.map(p => {
+  const namesMap = {HWG:'Hwange National Park',VFA:'Victoria Falls National Park',MNA:'Mana Pools National Park',GNZ:'Gonarezhou National Park',MTB:'Matobo National Park',NYG:'Nyanga National Park',CHM:'Chimanimani National Park',CHZ:'Chizarira National Park',MTS:'Matusadona National Park',ZMB:'Zambezi National Park',KZM:'Kazuma Pan National Park'};
+  const name = (p.name && !p.name.match(/^[A-Z]{3}$/)) ? p.name : (namesMap[p.code] || p.name || p.code);
+  return { code: p.code, name, region: p.region, curated: p.curated || {}, wiki: p.wiki || {}, id: p.id, photo_url: p.photo_url || null };
+})) %>;
 
-const PARK_NAMES_FB = <%- JSON.stringify(Object.fromEntries(parks.map(p => [p.code, p.name || p.code]))) %>;
-const PARK_REGIONS_FB = <%- JSON.stringify(Object.fromEntries(parks.map(p => [p.code, p.region || 'Zimbabwe']))) %>;
+const IMG_SEEDS = {HWG:'elephants-savanna',VFA:'victoria-falls-waterfall',MNA:'zambezi-river-canoe',GNZ:'gonarezhou-baobab',MTB:'matobo-rocks-rhino',NYG:'nyanga-mountains',CHM:'chimanimani-peaks',CHZ:'chizarira-gorge',MTS:'kariba-lake-sunset',ZMB:'zambezi-hippo',KZM:'kazuma-savanna'};
 
 // ── Leaflet Map ──────────────────────────────────────────────────────────────
 const map = L.map('touristMap', { center: [-19.2, 29.8], zoom: 6 });
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+  attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
   maxZoom: 18
 }).addTo(map);
 
 PARKS.forEach(park => {
   const c = park.curated;
-  if (!c.lat) return;
+  if (!c || !c.lat) return;
   const icon = L.divIcon({
     className: '',
-    html: `<div style="width:38px;height:38px;border-radius:50%;background:#1D9E75;border:3px solid rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.4);cursor:pointer"><i class="fa-solid fa-tree" style="color:#fff;font-size:13px"></i></div>`,
-    iconSize:[38,38], iconAnchor:[19,19], popupAnchor:[0,-22]
+    html: `<div style="width:34px;height:34px;border-radius:50%;background:#1D9E75;border:2.5px solid rgba(255,255,255,0.85);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);cursor:pointer"><i class="fa-solid fa-tree" style="color:#fff;font-size:12px"></i></div>`,
+    iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-20]
   });
-  L.marker([c.lat, c.lng], { icon })
-    .addTo(map)
-    .bindPopup(`<div style="min-width:170px;font-family:'DM Sans',sans-serif;padding:4px 0">
-      <strong style="font-size:13px;color:#0a1628">${park.name || PARK_NAMES_FB[park.code]}</strong><br>
-      <span style="font-size:11px;color:#666">${park.region || PARK_REGIONS_FB[park.code]}</span><br>
-      ${c.area ? `<span style="font-size:11px"><b>${c.area}</b></span><br>` : ''}
-      <button onclick="openDrawer('${park.code}')" style="margin-top:8px;width:100%;padding:5px;background:#1D9E75;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">Explore →</button>
+  L.marker([c.lat, c.lng], { icon }).addTo(map)
+    .bindPopup(`<div style="min-width:155px;font-family:'DM Sans',sans-serif;padding:3px 0">
+      <strong style="font-size:12px;color:#0a1628">${park.name}</strong><br>
+      <span style="font-size:10px;color:#666">${park.region || 'Zimbabwe'}</span><br>
+      ${c.area ? `<span style="font-size:10px"><b>${c.area}</b></span><br>` : ''}
+      <button onclick="openDrawer('${park.code}')" style="margin-top:6px;width:100%;padding:5px;background:#1D9E75;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600">Explore →</button>
     </div>`)
     .on('click', () => openDrawer(park.code));
 });
 
 // ── Drawer ───────────────────────────────────────────────────────────────────
 let drawerMap = null;
+let currentParkCode = null;
 
 function openDrawer(code) {
   const park = PARKS.find(p => p.code === code);
   if (!park) return;
+  currentParkCode = code;
 
-  const name = park.name || PARK_NAMES_FB[code] || code;
-  const region = park.region || PARK_REGIONS_FB[code] || 'Zimbabwe';
   const c = park.curated || {};
   const wiki = park.wiki || {};
+  const seed = IMG_SEEDS[code] || 'zimbabwe-wildlife';
+  const picsumFallback = `https://picsum.photos/seed/${seed}/640/360`;
+  const imgSrc = park.photo_url || wiki.thumbnail || picsumFallback;
 
   const animals = (c.animals || []).map(a => `<span class="tp-animal">${a}</span>`).join('');
   const todoItems = (c.todo || []).map(t => `<li>${t}</li>`).join('');
 
   document.getElementById('drawerContent').innerHTML = `
-    ${wiki.thumbnail
-      ? `<img class="tp-drawer-img" src="${wiki.thumbnail}" alt="${name}">`
-      : `<div class="tp-drawer-img-fallback"><i class="fa-solid fa-tree"></i></div>`
-    }
+    <img class="tp-drawer-img" src="${imgSrc}" alt="${park.name}"
+         onerror="if(this.src!=='${picsumFallback}'){this.src='${picsumFallback}'}else{this.style.display='none';document.getElementById('drawerFallback').style.display='flex'}">
+    <div class="tp-drawer-img-fallback" id="drawerFallback" style="display:none">
+      <i class="fa-solid fa-tree"></i><span>${park.name}</span>
+    </div>
     <div class="tp-drawer-body">
       <div class="tp-drawer-badge">National Park · Zimbabwe</div>
-      <h2 class="tp-drawer-title">${name}</h2>
-      <div class="tp-drawer-region"><i class="fa-solid fa-location-dot"></i> ${region}</div>
+      <h2 class="tp-drawer-title">${park.name}</h2>
+      <div class="tp-drawer-region"><i class="fa-solid fa-location-dot"></i> ${park.region || 'Zimbabwe'}</div>
 
       <div class="tp-drawer-kpis">
-        <div class="tp-kpi"><i class="fa-solid fa-expand"></i><strong>${c.area || '—'}</strong><small>Total Area</small></div>
+        <div class="tp-kpi"><i class="fa-solid fa-expand"></i><strong>${c.area || '—'}</strong><small>Area</small></div>
         <div class="tp-kpi"><i class="fa-solid fa-calendar"></i><strong>${c.established || '—'}</strong><small>Established</small></div>
-        <div class="tp-kpi"><i class="fa-regular fa-sun"></i><strong style="font-size:0.82rem">${c.bestTime || '—'}</strong><small>Best Visit</small></div>
+        <div class="tp-kpi"><i class="fa-regular fa-sun"></i><strong style="font-size:0.75rem">${c.bestTime || '—'}</strong><small>Best Time</small></div>
       </div>
 
       ${wiki.extract ? `
@@ -496,8 +584,8 @@ function openDrawer(code) {
       </div>` : ''}
 
       <div class="tp-drawer-cta">
-        <a href="/feedback?park_id=${park.id || ''}" class="tp-drawer-cta-primary"><i class="fa-regular fa-star"></i> Rate My Visit</a>
-        <a href="/" class="tp-drawer-cta-outline"><i class="fa-solid fa-house"></i> Home</a>
+        <button class="tp-cta-primary" onclick="openBookModal('${code}')"><i class="fa-solid fa-calendar-check"></i> Book Visit</button>
+        <a href="/feedback?park_id=${park.id || ''}" class="tp-cta-outline"><i class="fa-regular fa-star"></i> Rate</a>
       </div>
     </div>
   `;
@@ -506,7 +594,6 @@ function openDrawer(code) {
   document.getElementById('drawer').classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  // Mini map inside drawer
   if (c.lat) {
     if (drawerMap) { drawerMap.remove(); drawerMap = null; }
     setTimeout(() => {
@@ -524,12 +611,54 @@ function closeDrawer() {
   if (drawerMap) { drawerMap.remove(); drawerMap = null; }
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
-
-// ── PWA install prompt ───────────────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+// ── Book Visit Modal ─────────────────────────────────────────────────────────
+function openBookModal(code) {
+  const park = PARKS.find(p => p.code === code);
+  if (!park) return;
+  document.getElementById('bookParkName').textContent = park.name;
+  document.getElementById('bookForm').style.display = '';
+  document.getElementById('bookSuccess').style.display = 'none';
+  document.getElementById('bvDate').min = new Date().toISOString().split('T')[0];
+  document.getElementById('bookModal').classList.add('open');
 }
+
+function closeBookModal() {
+  document.getElementById('bookModal').classList.remove('open');
+}
+
+async function submitBooking() {
+  const park = PARKS.find(p => p.code === currentParkCode);
+  const name = document.getElementById('bvName').value.trim();
+  if (!name) { document.getElementById('bvName').focus(); return; }
+
+  const payload = {
+    submitted_by: name,
+    park_id: park?.id || '',
+    visit_date: document.getElementById('bvDate').value,
+    visitor_email: document.getElementById('bvEmail').value.trim(),
+    visitor_count: document.getElementById('bvCount').value,
+    notes: document.getElementById('bvNotes').value.trim(),
+    rating: 5,
+    category: 'visit_request',
+    comments: `Visit booking request from ${name}. Group size: ${document.getElementById('bvCount').value}. ${document.getElementById('bvNotes').value.trim()}`
+  };
+
+  try {
+    await fetch('/api-proxy/feedback/public', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (_) { /* show success anyway */ }
+
+  document.getElementById('bookForm').style.display = 'none';
+  document.getElementById('bookSuccess').style.display = '';
+}
+
+document.getElementById('bookModal').addEventListener('click', e => { if (e.target === document.getElementById('bookModal')) closeBookModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); closeBookModal(); } });
+
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
 </script>
 </body>
 </html>

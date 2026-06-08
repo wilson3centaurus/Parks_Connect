@@ -1,4 +1,4 @@
-import { getDb } from '../utils/db.js';
+import { getDb, supabase } from '../utils/db.js';
 import { getAssignedParkIds, normalizeRole, resolveParkId } from '../utils/parks.js';
 
 const ASSIGNABLE_ROLES = new Set(['tourism_operator', 'environment_officer', 'authority_admin']);
@@ -130,6 +130,39 @@ export async function getParkDetail(req, res) {
   ]);
 
   return res.json({ park, officers, visitorStats: visitorStats || {}, recentLogs });
+}
+
+export async function uploadParkPhoto(req, res) {
+  if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+  const parkId = Number(req.params.id);
+  if (!parkId) return res.status(400).json({ message: 'Invalid park ID' });
+
+  try {
+    const db = await getDb();
+    const park = await db.get(`SELECT id FROM parks WHERE id = ?`, [parkId]);
+    if (!park) return res.status(404).json({ message: 'Park not found' });
+
+    const ext = (req.file.mimetype || 'image/jpeg').split('/')[1] || 'jpg';
+    const fileName = `parks/${parkId}-${Date.now()}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from(process.env.STORAGE_BUCKET || 'avatars')
+      .upload(fileName, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+      .from(process.env.STORAGE_BUCKET || 'avatars')
+      .getPublicUrl(fileName);
+
+    const photoUrl = urlData.publicUrl;
+    await db.run(`UPDATE parks SET photo_url = ? WHERE id = ?`, [photoUrl, parkId]);
+
+    return res.json({ photo_url: photoUrl });
+  } catch (err) {
+    console.error('[park photo]', err.message);
+    return res.status(500).json({ message: 'Upload failed' });
+  }
 }
 
 export async function listThresholds(req, res) {

@@ -45,11 +45,13 @@
     .section-title { font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem; }
     .section-sub { font-size: 0.875rem; color: rgba(255,255,255,0.45); margin-bottom: 2rem; }
     .parks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
-    .park-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.5rem; transition: border-color 0.15s, background 0.15s; }
+    .park-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; transition: border-color 0.15s, background 0.15s; text-decoration: none; display: block; }
     .park-card:hover { border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.04); }
+    .park-card-img { width: 100%; height: 160px; object-fit: cover; display: block; background: linear-gradient(135deg,#0d2a1a,#1a4a2e); }
+    .park-card-body { padding: 1.25rem; }
     .park-card-badge { display: inline-block; padding: 0.2rem 0.6rem; background: rgba(34,197,94,0.15); border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: #22c55e; text-transform: uppercase; margin-bottom: 0.85rem; }
     .park-card h3 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem; }
-    .park-card p { font-size: 0.82rem; color: rgba(255,255,255,0.45); line-height: 1.6; }
+    .park-card p { font-size: 0.82rem; color: rgba(255,255,255,0.45); line-height: 1.6; margin: 0; }
 
     /* Feedback CTA */
     .feedback-banner { max-width: 1100px; margin: 0 auto 4rem; padding: 0 2rem; }
@@ -102,46 +104,33 @@
     <h2 class="section-title">National Parks</h2>
     <p class="section-sub">Zimbabwe's most iconic protected areas, managed through Parks Connect</p>
     <div class="parks-grid">
-      <% if (parks && parks.length > 0) { %>
-        <% parks.forEach(function(park) { %>
-          <div class="park-card">
+      <%
+      const IMG_SEEDS_HOME = {HWG:'elephants-savanna',VFA:'victoria-falls-waterfall',MNA:'zambezi-river-canoe',GNZ:'gonarezhou-baobab',MTB:'matobo-rocks-rhino',NYG:'nyanga-mountains',CHM:'chimanimani-peaks',CHZ:'chizarira-gorge',MTS:'kariba-lake-sunset',ZMB:'zambezi-hippo',KZM:'kazuma-savanna'};
+      const PARK_DESC_HOME = {HWG:"Zimbabwe's largest park — vast elephant herds and over 100 mammal species.",VFA:'UNESCO World Heritage Site surrounding one of the world\'s largest waterfalls.',MNA:'UNESCO site on the Zambezi floodplains, famous for walking and canoe safaris.',GNZ:'Remote wilderness in south-east Zimbabwe, part of the Great Limpopo Park.',MTB:'Dramatic granite boulders, ancient San rock paintings, and white rhino tracking.',NYG:"Zimbabwe's Eastern Highlands — highest peak at Mt. Nyangani, trout-filled streams.",CHM:'Rugged mountain wilderness on the Mozambique border with exceptional hiking.',CHZ:'Remote northwest wilderness, one of Africa\'s least-visited wild areas.',MTS:'On the shores of Lake Kariba, famous for water-based safaris.',ZMB:'Borders Victoria Falls along the Zambezi — prime game viewing and river activities.',KZM:'Remote pan ecosystem near Botswana, haven for large grazing herds.'};
+      const showParks = (parks && parks.length > 0) ? parks.slice(0,6) : [
+        {name:'Hwange National Park',code:'HWG',region:'Matabeleland North'},
+        {name:'Victoria Falls National Park',code:'VFA',region:'Matabeleland North'},
+        {name:'Mana Pools National Park',code:'MNA',region:'Mashonaland West'},
+        {name:'Gonarezhou National Park',code:'GNZ',region:'Masvingo'},
+        {name:'Matobo National Park',code:'MTB',region:'Matabeleland South'},
+        {name:'Nyanga National Park',code:'NYG',region:'Manicaland'}
+      ];
+      %>
+      <% showParks.forEach(function(park) {
+        const seed = IMG_SEEDS_HOME[park.code] || 'zimbabwe-wildlife';
+        const imgSrc = park.photo_url || `https://picsum.photos/seed/${seed}/640/360`;
+        const desc = PARK_DESC_HOME[park.code] || (park.region ? park.region + ' Region' : 'Zimbabwe National Park');
+      %>
+        <a href="/parks" class="park-card">
+          <img class="park-card-img" src="<%= imgSrc %>" alt="<%= park.name %>"
+               onerror="this.style.display='none'">
+          <div class="park-card-body">
             <div class="park-card-badge"><%= park.code || 'PARK' %></div>
             <h3><%= park.name %></h3>
-            <p><%= park.region ? park.region + ' Region' : 'Zimbabwe National Park' %></p>
+            <p><%= desc %></p>
           </div>
-        <% }); %>
-      <% } else { %>
-        <div class="park-card">
-          <div class="park-card-badge">HNP</div>
-          <h3>Hwange National Park</h3>
-          <p>Zimbabwe's largest national park, home to more than 100 mammal and 400 bird species.</p>
-        </div>
-        <div class="park-card">
-          <div class="park-card-badge">VF</div>
-          <h3>Victoria Falls National Park</h3>
-          <p>UNESCO World Heritage Site surrounding one of the world's largest waterfalls.</p>
-        </div>
-        <div class="park-card">
-          <div class="park-card-badge">MP</div>
-          <h3>Mana Pools National Park</h3>
-          <p>UNESCO World Heritage Site on the Zambezi floodplains, known for walking safaris.</p>
-        </div>
-        <div class="park-card">
-          <div class="park-card-badge">GP</div>
-          <h3>Gonarezhou National Park</h3>
-          <p>Remote wilderness in the south-east, home to large elephant herds and rare birds.</p>
-        </div>
-        <div class="park-card">
-          <div class="park-card-badge">MNP</div>
-          <h3>Matobo National Park</h3>
-          <p>Ancient granite hills sheltering cave paintings, white rhinos, and diverse wildlife.</p>
-        </div>
-        <div class="park-card">
-          <div class="park-card-badge">NYA</div>
-          <h3>Nyanga National Park</h3>
-          <p>Zimbabwe's highest mountains with waterfalls, forests, and trout streams.</p>
-        </div>
-      <% } %>
+        </a>
+      <% }); %>
     </div>
   </div>
 

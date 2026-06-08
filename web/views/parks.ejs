@@ -131,6 +131,7 @@ const roleLabel = { authority_admin: 'HQ Admin', environment_officer: 'Park Mana
       visitorStats: db?.visitorStats || {},
       recentLogs: db?.recentLogs || [],
       daily_capacity_limit: db?.daily_capacity_limit || null,
+      photo_url: db?.photo_url || null,
       inSystem: !!db
     };
   });
@@ -236,12 +237,21 @@ const roleLabel = { authority_admin: 'HQ Admin', environment_officer: 'Park Mana
       : '<p style="color:var(--zp-muted);font-size:13px">No visitor logs yet</p>';
 
     document.getElementById('detailContent').innerHTML = `
-      <div class="detail-header">
-        <div class="detail-park-icon"><i class="fa-solid fa-tree"></i></div>
-        <div>
+      <div class="detail-header" style="flex-wrap:wrap;gap:8px">
+        <div class="detail-park-icon" style="${park.photo_url ? 'padding:0;overflow:hidden' : ''}">
+          ${park.photo_url
+            ? `<img src="${park.photo_url}" style="width:44px;height:44px;object-fit:cover;border-radius:10px" onerror="this.parentElement.innerHTML='<i class=\\'fa-solid fa-tree\\'></i>'">`
+            : `<i class="fa-solid fa-tree"></i>`}
+        </div>
+        <div style="flex:1;min-width:0">
           <h3>${park.name}</h3>
           <span><i class="fa-solid fa-location-dot"></i> ${park.region}</span>
         </div>
+        ${IS_ADMIN && park.id ? `
+        <label style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid var(--zp-green);background:transparent;color:var(--zp-green);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+          <i class="fa-solid fa-camera"></i> ${park.photo_url ? 'Change' : 'Add'} Photo
+          <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadParkPhoto(${park.id}, this)">
+        </label>` : ''}
       </div>
 
       <p class="detail-desc">${park.desc}</p>
@@ -326,6 +336,32 @@ const roleLabel = { authority_admin: 'HQ Admin', environment_officer: 'Park Mana
       card.style.display = card.dataset.parkName.includes(q) ? '' : 'none';
     });
   });
+
+  // ── Park photo upload ─────────────────────────────────────────────
+  window.uploadParkPhoto = async function(parkId, input) {
+    if (!input.files.length) return;
+    const label = input.parentElement;
+    const orig = label.innerHTML;
+    label.style.opacity = '0.5';
+    label.style.pointerEvents = 'none';
+    try {
+      const form = new FormData();
+      form.append('photo', input.files[0]);
+      const resp = await fetch(`/dashboard/parks/${parkId}/photo`, { method: 'POST', body: form });
+      const data = await resp.json();
+      if (!resp.ok) { alert(data.message || 'Upload failed'); return; }
+      // Update icon in detail header
+      const iconEl = document.querySelector('.detail-park-icon');
+      if (iconEl) { iconEl.style = 'padding:0;overflow:hidden'; iconEl.innerHTML = `<img src="${data.photo_url}" style="width:44px;height:44px;object-fit:cover;border-radius:10px">`; }
+      // Update local data so reopening the drawer shows the new photo
+      const pk = ALL_PARKS.find(p => p.id === parkId);
+      if (pk) pk.photo_url = data.photo_url;
+      // Update button label
+      label.querySelector('input').remove();
+      label.innerHTML = `<i class="fa-solid fa-circle-check"></i> Photo saved <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadParkPhoto(${parkId}, this)">`;
+    } catch { alert('Network error. Please try again.'); }
+    finally { label.style.opacity = ''; label.style.pointerEvents = ''; }
+  };
 
   // ── Resize map on panel toggle ────────────────────────────────────
   setTimeout(() => map.invalidateSize(), 300);

@@ -1,29 +1,40 @@
-﻿{
-  "name": "zimparks-platform",
+{
+  "name": "parks-connect",
   "version": "1.0.0",
-  "description": "Legacy monolith shell for Parks Connect. Active deploys live in backend/ and web/.",
-  "main": "app.js",
+  "description": "Parks Connect — ZimParks unified app (API + EJS web in one process)",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
-    "start": "npm --prefix web run start",
-    "dev": "npm --prefix web run dev",
-    "dev:web": "npm --prefix web run dev",
-    "dev:backend": "npm --prefix backend run dev",
-    "start:legacy": "node app.js",
-    "dev:legacy": "nodemon app.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "migrate": "node backend/utils/migrate.js",
+    "seed": "node backend/seeders/seed.js"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "@supabase/supabase-js": "^2.107.0",
+    "axios": "^1.7.4",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.3",
+    "cookie-parser": "^1.4.7",
+    "cookie-session": "^2.1.1",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
-    "express": "^4.21.1",
-    "express-session": "^1.18.1",
-    "express-validator": "^7.2.1",
+    "ethers": "^6.15.0",
+    "express": "^4.19.2",
+    "express-ejs-layouts": "^2.5.1",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
     "multer": "^2.0.2",
-    "mysql2": "^3.11.3",
-    "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^6.9.16",
+    "pdfkit": "^0.17.2",
+    "pg": "^8.16.3",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "nodemon": "^3.1.4",
+    "tailwindcss": "^3.4.9"
   }
 }

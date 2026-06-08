@@ -84,6 +84,20 @@ app.use((req, res, next) => {
 app.get('/sw.js', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'sw.js')));
 app.get('/manifest.json', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.json')));
 
+// Proxy public API calls (tourist page feedback/booking) to backend — no auth required
+app.use('/api-proxy', async (req, res) => {
+  try {
+    const { default: axios } = await import('axios');
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+    const targetUrl = `${backendUrl}/api${req.path}`;
+    const response = await axios({ method: req.method, url: targetUrl, data: req.body, params: req.query, headers: { 'Content-Type': 'application/json' } });
+    return res.status(response.status).json(response.data);
+  } catch (err) {
+    const status = err.response?.status || 500;
+    return res.status(status).json(err.response?.data || { message: 'Proxy error' });
+  }
+});
+
 app.get('/', async (req, res) => {
   if (req.session?.user) return res.redirect('/dashboard');
   try {

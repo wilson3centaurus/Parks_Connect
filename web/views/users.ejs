@@ -8,27 +8,35 @@
   .um-notice.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #16a34a; }
   .um-notice.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #dc2626; }
 
-  /* Create card */
   .um-create-card {
     background: var(--zp-white); border: 1px solid var(--zp-border);
     border-radius: 14px; padding: 1.75rem; margin-bottom: 2rem;
     box-shadow: var(--zp-soft-shadow);
   }
   .um-create-card h3 { font-size: 1rem; font-weight: 700; color: var(--zp-text); margin-bottom: 1.25rem; }
-  .um-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-  .um-field label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--zp-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem; }
+  .um-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+  .um-field label { display: block; font-size: 0.7rem; font-weight: 700; color: var(--zp-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
   .um-field input, .um-field select {
-    width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px;
+    width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px;
     border: 1px solid var(--zp-border); background: var(--zp-surface);
     color: var(--zp-text); font-size: 0.875rem; font-family: inherit;
   }
   .um-field input:focus, .um-field select:focus { outline: none; border-color: var(--zp-green); box-shadow: 0 0 0 3px rgba(29,158,117,0.12); }
   .um-field input::placeholder { color: var(--zp-muted); opacity: 0.7; }
-  .um-field-note { font-size: 0.72rem; color: var(--zp-muted); margin-top: 0.3rem; }
+  .um-field-note { font-size: 0.7rem; color: var(--zp-muted); margin-top: 0.3rem; }
+
+  .um-pw-preview {
+    margin-bottom: 1rem; padding: 0.55rem 0.85rem;
+    background: rgba(29,158,117,0.08); border: 1px solid rgba(29,158,117,0.2);
+    border-radius: 8px; font-size: 0.78rem; color: var(--zp-text);
+    display: none; align-items: center; gap: 0.5rem;
+  }
+  .um-pw-preview i { color: var(--zp-green); }
+  .um-pw-preview code { font-family: monospace; font-weight: 700; letter-spacing: 0.04em; }
+
   .btn-create { padding: 0.6rem 1.5rem; border-radius: 8px; background: var(--zp-green); color: #fff; border: none; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: background 0.15s; }
   .btn-create:hover { background: var(--zp-green-dark); }
 
-  /* Users table */
   .um-table-card {
     background: var(--zp-white); border: 1px solid var(--zp-border);
     border-radius: 14px; overflow: hidden; box-shadow: var(--zp-soft-shadow);
@@ -37,34 +45,38 @@
   .um-table-head h3 { font-size: 1rem; font-weight: 700; color: var(--zp-text); margin: 0; }
   .um-count { font-size: 0.75rem; color: var(--zp-muted); background: var(--zp-surface); padding: 0.2rem 0.6rem; border-radius: 6px; }
   .um-page table { width: 100%; border-collapse: collapse; }
-  .um-page th { padding: 0.6rem 1.25rem; text-align: left; font-size: 0.7rem; font-weight: 700; color: var(--zp-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--zp-border); background: var(--zp-surface); }
-  .um-page td { padding: 0.85rem 1.25rem; font-size: 0.875rem; color: var(--zp-text); border-bottom: 1px solid var(--zp-border); vertical-align: middle; }
+  .um-page th { padding: 0.55rem 1.1rem; text-align: left; font-size: 0.68rem; font-weight: 700; color: var(--zp-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--zp-border); background: var(--zp-surface); }
+  .um-page td { padding: 0.8rem 1.1rem; font-size: 0.875rem; color: var(--zp-text); border-bottom: 1px solid var(--zp-border); vertical-align: middle; }
   .um-page tr:last-child td { border-bottom: none; }
   .um-page tr:hover td { background: var(--zp-green-light); }
-  .um-cell-muted { color: var(--zp-muted) !important; font-size: 0.82rem; }
+  .um-cell-muted { color: var(--zp-muted) !important; font-size: 0.8rem; }
   .um-empty { padding: 2rem 1.5rem; color: var(--zp-muted); font-size: 0.875rem; }
 
-  .role-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+  .um-user-cell { display: flex; align-items: center; gap: 0.6rem; }
+  .um-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--zp-green); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: #fff; flex-shrink: 0; overflow: hidden; }
+  .um-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  .role-badge { display: inline-block; padding: 0.18rem 0.55rem; border-radius: 6px; font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
   .role-badge.authority_admin { background: rgba(124,58,237,0.1); color: #7c3aed; border: 1px solid rgba(124,58,237,0.2); }
   .role-badge.environment_officer { background: rgba(29,158,117,0.1); color: var(--zp-green-dark); border: 1px solid rgba(29,158,117,0.2); }
   .role-badge.tourism_operator { background: rgba(59,130,246,0.1); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.2); }
 
-  /* Action buttons */
-  .um-actions { display: flex; gap: 0.5rem; align-items: center; }
-  .btn-reset, .btn-delete { padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .um-actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+  .btn-reset, .btn-delete, .btn-imp { padding: 0.28rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
   .btn-reset { background: rgba(59,130,246,0.08); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.2); }
   .btn-reset:hover { background: rgba(59,130,246,0.18); }
   .btn-delete { background: rgba(239,68,68,0.08); color: #dc2626; border: 1px solid rgba(239,68,68,0.2); }
   .btn-delete:hover { background: rgba(239,68,68,0.18); }
+  .btn-imp { background: rgba(245,158,11,0.08); color: #b45309; border: 1px solid rgba(245,158,11,0.2); }
+  .btn-imp:hover { background: rgba(245,158,11,0.18); }
 
-  /* Modal */
   .um-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
   .um-modal-overlay.open { display: flex; }
-  .um-modal { background: var(--zp-white); border: 1px solid var(--zp-border); border-radius: 14px; padding: 2rem; width: 100%; max-width: 420px; box-shadow: 0 12px 40px rgba(0,0,0,0.18); }
+  .um-modal { background: var(--zp-white); border: 1px solid var(--zp-border); border-radius: 14px; padding: 2rem; width: 100%; max-width: 440px; box-shadow: 0 12px 40px rgba(0,0,0,0.18); }
   .um-modal h4 { font-size: 1rem; font-weight: 700; color: var(--zp-text); margin-bottom: 0.4rem; }
-  .um-modal p { font-size: 0.825rem; color: var(--zp-muted); margin-bottom: 1.25rem; }
+  .um-modal p { font-size: 0.8rem; color: var(--zp-muted); margin-bottom: 1rem; }
   .um-modal .um-field { margin-bottom: 1rem; }
-  .um-modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+  .um-modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; }
   .btn-cancel { padding: 0.5rem 1.25rem; border-radius: 8px; border: 1px solid var(--zp-border); background: transparent; color: var(--zp-muted); font-size: 0.875rem; cursor: pointer; transition: all 0.15s; font-family: inherit; }
   .btn-cancel:hover { background: var(--zp-surface); color: var(--zp-text); }
   .btn-confirm { padding: 0.5rem 1.25rem; border-radius: 8px; border: none; background: var(--zp-green); color: #fff; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
@@ -74,7 +86,7 @@
 <section class="zim-page-header mb-4">
   <div class="um-header">
     <h2>User Management</h2>
-    <p>Create staff accounts and manage access for environment officers and tourism operators.</p>
+    <p>Create staff accounts and manage access. Default password = ID number (no spaces, all letters lowercase).</p>
   </div>
 </section>
 
@@ -88,23 +100,32 @@
 
   <!-- Create account -->
   <div class="um-create-card">
-    <h3>Create Staff Account</h3>
+    <h3><i class="fa-solid fa-user-plus" style="color:var(--zp-green);margin-right:6px"></i>Create Staff Account</h3>
     <form action="/dashboard/users" method="POST" id="createForm">
       <div class="um-grid">
         <div class="um-field">
-          <label>Full Name</label>
+          <label>Full Name *</label>
           <input name="name" type="text" placeholder="e.g. Tendai Moyo" required minlength="2">
         </div>
         <div class="um-field">
-          <label>Email</label>
-          <input name="email" type="email" placeholder="staff@zimparks.gov.zw" required>
+          <label>National ID Number *</label>
+          <input name="id_number" id="idNumberInput" type="text" placeholder="e.g. 63-123456R42" required>
+          <div class="um-field-note">Becomes the default login password.</div>
         </div>
         <div class="um-field">
-          <label>Role</label>
+          <label>Email Address *</label>
+          <input name="email" type="email" placeholder="officer@zimparks.gov.zw" required>
+        </div>
+        <div class="um-field">
+          <label>Phone</label>
+          <input name="phone" type="tel" placeholder="+263 77...">
+        </div>
+        <div class="um-field">
+          <label>Role *</label>
           <select name="role" id="roleSelect" required>
+            <option value="environment_officer" selected>Environment Officer</option>
+            <option value="tourism_operator">Tourism / Reception Staff</option>
             <option value="authority_admin">Authority Admin</option>
-            <option value="environment_officer">Environment Officer</option>
-            <option value="tourism_operator">Tourism Operator</option>
           </select>
         </div>
         <div class="um-field" id="parkField">
@@ -117,14 +138,16 @@
               <% }); %>
             <% } %>
           </select>
-          <div class="um-field-note">Required for officers and operators.</div>
-        </div>
-        <div class="um-field">
-          <label>Password</label>
-          <input name="password" type="password" placeholder="Min 8 chars, letters + numbers" required minlength="8">
+          <div class="um-field-note">One officer = one park only.</div>
         </div>
       </div>
-      <button type="submit" class="btn-create">Create Account</button>
+
+      <div class="um-pw-preview" id="pwPreview">
+        <i class="fa-solid fa-key"></i>
+        Default password: <code id="pwPreviewText"></code>
+      </div>
+
+      <button type="submit" class="btn-create"><i class="fa-solid fa-user-plus"></i> Create Account &amp; Send Welcome Email</button>
     </form>
   </div>
 
@@ -137,28 +160,49 @@
     <% if (!locals.users || locals.users.length === 0) { %>
       <p class="um-empty">No staff accounts yet. Create the first one above.</p>
     <% } else { %>
+    <div style="overflow-x:auto">
     <table>
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Email</th>
+          <th>Officer</th>
+          <th>ID Number</th>
           <th>Role</th>
           <th>Assigned Park</th>
-          <th>Created</th>
+          <th>Status</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        <% locals.users.forEach(function(u) { %>
+        <% locals.users.forEach(function(u) {
+          const initials = u.name ? u.name.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase() : '?';
+          const defaultPw = u.id_number ? u.id_number.replace(/\s+/g,'').toLowerCase() : '';
+        %>
           <tr>
-            <td><strong><%= u.name %></strong></td>
-            <td class="um-cell-muted"><%= u.email %></td>
+            <td>
+              <div class="um-user-cell">
+                <div class="um-avatar">
+                  <% if (u.photo_url) { %><img src="<%= u.photo_url %>" alt="<%= u.name %>"><% } else { %><%= initials %><% } %>
+                </div>
+                <div>
+                  <strong style="display:block;font-size:0.875rem"><%= u.name %></strong>
+                  <span class="um-cell-muted"><%= u.email %></span>
+                </div>
+              </div>
+            </td>
+            <td class="um-cell-muted" style="font-family:monospace"><%= u.id_number || '—' %></td>
             <td><span class="role-badge <%= u.role %>"><%= u.role.replace(/_/g, ' ') %></span></td>
-            <td class="um-cell-muted"><%- u.park_name || '<span style="opacity:0.45">All parks</span>' %></td>
-            <td class="um-cell-muted"><%= u.created_at ? new Date(u.created_at).toLocaleDateString('en-ZW', { dateStyle: 'medium' }) : '—' %></td>
+            <td class="um-cell-muted"><%- u.park_name || '<span style="opacity:0.4">All parks</span>' %></td>
+            <td>
+              <% if (u.first_login) { %>
+                <span style="font-size:0.68rem;padding:0.16rem 0.45rem;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:#b45309;border-radius:5px;font-weight:600">Pending Login</span>
+              <% } else { %>
+                <span style="font-size:0.68rem;padding:0.16rem 0.45rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);color:#16a34a;border-radius:5px;font-weight:600">Active</span>
+              <% } %>
+            </td>
             <td>
               <div class="um-actions">
-                <button class="btn-reset" onclick="openResetModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>')">Reset PW</button>
+                <button class="btn-reset" onclick="openResetModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>', '<%= defaultPw %>')">Reset PW</button>
+                <button class="btn-imp" onclick="openImpersonateModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>')"><i class="fa-solid fa-user-secret"></i></button>
                 <form action="/dashboard/users/<%= u.id %>/delete" method="POST" style="margin:0" onsubmit="return confirm('Remove <%= u.name %>? This cannot be undone.')">
                   <button type="submit" class="btn-delete">Remove</button>
                 </form>
@@ -168,6 +212,7 @@
         <% }); %>
       </tbody>
     </table>
+    </div>
     <% } %>
   </div>
 </div>
@@ -175,24 +220,43 @@
 <!-- Reset password modal -->
 <div class="um-modal-overlay" id="resetModal">
   <div class="um-modal">
-    <h4>Reset Password</h4>
-    <p id="resetModalDesc">Set a new password for this account.</p>
+    <h4><i class="fa-solid fa-key" style="color:var(--zp-green);margin-right:6px"></i>Reset Password</h4>
+    <p id="resetModalDesc">Resets password to the officer's ID number.</p>
+    <div style="background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);border-radius:8px;padding:0.65rem 1rem;margin-bottom:0.5rem;font-size:0.8rem;color:var(--zp-text)">
+      <i class="fa-solid fa-circle-info" style="color:var(--zp-green);margin-right:4px"></i>
+      Will be reset to: <code id="resetDefaultPw" style="font-weight:700;font-family:monospace;font-size:0.85rem"></code>
+    </div>
     <form id="resetForm" method="POST">
-      <div class="um-field">
-        <label>New Password</label>
-        <input name="new_password" type="password" placeholder="Min 8 chars, letters + numbers" required minlength="8">
-      </div>
       <div class="um-modal-actions">
         <button type="button" class="btn-cancel" onclick="closeResetModal()">Cancel</button>
-        <button type="submit" class="btn-confirm">Reset Password</button>
+        <button type="submit" class="btn-confirm">Reset to ID Number</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Impersonate modal -->
+<div class="um-modal-overlay" id="impModal">
+  <div class="um-modal">
+    <h4><i class="fa-solid fa-user-secret" style="color:#b45309;margin-right:6px"></i>Login as User</h4>
+    <p id="impModalDesc">Enter the impersonation key to log in as this staff member.</p>
+    <div class="um-field">
+      <label>Impersonation Key</label>
+      <input type="password" id="impKey" placeholder="••••••••" style="font-family:monospace;letter-spacing:0.08em">
+    </div>
+    <div class="um-modal-actions">
+      <button type="button" class="btn-cancel" onclick="closeImpModal()">Cancel</button>
+      <button type="button" class="btn-confirm" onclick="submitImpersonate()">Login as User</button>
+    </div>
   </div>
 </div>
 
 <script>
   var roleSelect = document.getElementById('roleSelect');
   var parkSelect = document.getElementById('parkSelect');
+  var idInput = document.getElementById('idNumberInput');
+  var pwPreview = document.getElementById('pwPreview');
+  var pwPreviewText = document.getElementById('pwPreviewText');
 
   function updateParkRequired() {
     var needsPark = roleSelect.value === 'environment_officer' || roleSelect.value === 'tourism_operator';
@@ -201,15 +265,47 @@
   roleSelect.addEventListener('change', updateParkRequired);
   updateParkRequired();
 
-  function openResetModal(userId, name) {
-    document.getElementById('resetModalDesc').textContent = 'Set a new password for ' + name + '.';
+  idInput.addEventListener('input', function() {
+    var id = idInput.value.trim().replace(/\s+/g,'').toLowerCase();
+    if (id.length >= 4) {
+      pwPreviewText.textContent = id;
+      pwPreview.style.display = 'flex';
+    } else {
+      pwPreview.style.display = 'none';
+    }
+  });
+
+  function openResetModal(userId, name, defaultPw) {
+    document.getElementById('resetModalDesc').textContent = 'Reset password for ' + name + ' to their ID number.';
+    document.getElementById('resetDefaultPw').textContent = defaultPw || '(no ID on file — will prompt for new password)';
     document.getElementById('resetForm').action = '/dashboard/users/' + userId + '/reset-password';
     document.getElementById('resetModal').classList.add('open');
   }
-  function closeResetModal() {
-    document.getElementById('resetModal').classList.remove('open');
+  function closeResetModal() { document.getElementById('resetModal').classList.remove('open'); }
+  document.getElementById('resetModal').addEventListener('click', function(e) { if (e.target === this) closeResetModal(); });
+
+  var impTargetId = null;
+  function openImpersonateModal(userId, name) {
+    impTargetId = userId;
+    document.getElementById('impModalDesc').textContent = 'You will be logged in as ' + name + '. Enter the impersonation key to proceed.';
+    document.getElementById('impKey').value = '';
+    document.getElementById('impModal').classList.add('open');
   }
-  document.getElementById('resetModal').addEventListener('click', function(e) {
-    if (e.target === this) closeResetModal();
-  });
+  function closeImpModal() { document.getElementById('impModal').classList.remove('open'); }
+  document.getElementById('impModal').addEventListener('click', function(e) { if (e.target === this) closeImpModal(); });
+
+  async function submitImpersonate() {
+    var key = document.getElementById('impKey').value.trim();
+    if (!key) return;
+    try {
+      var r = await fetch('/dashboard/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_user_id: impTargetId, impersonate_key: key })
+      });
+      var data = await r.json();
+      if (!r.ok) { alert(data.message || 'Impersonation failed'); return; }
+      window.location.href = data.redirect || '/dashboard';
+    } catch (e) { alert('Request failed'); }
+  }
 </script>

@@ -1,0 +1,7 @@
+backend/node_modules
+web/node_modules
+backend/.env
+web/.env
+.env
+backend/uploads
+backend/exports

@@ -13,6 +13,108 @@
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1D9E75">
   <link rel="apple-touch-icon" href="/public/images/logo.png">
+<style>
+/* ── Profile dropdown ────────────────────────────────────────────────────── */
+.zp-profile-menu {
+  position: relative; display: inline-block;
+}
+.zp-profile-dropdown {
+  display: none; position: absolute; top: calc(100% + 10px); right: 0;
+  min-width: 220px; background: var(--zp-white); border: 1px solid var(--zp-border);
+  border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); z-index: 500;
+  padding: 0.5rem;
+}
+.zp-profile-menu.open .zp-profile-dropdown { display: block; }
+.zp-drop-header {
+  padding: 0.75rem 0.85rem 0.65rem; border-bottom: 1px solid var(--zp-border); margin-bottom: 0.35rem;
+}
+.zp-drop-header strong { display: block; font-size: 0.875rem; color: var(--zp-text); }
+.zp-drop-header span { font-size: 0.75rem; color: var(--zp-muted); }
+.zp-drop-item {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.85rem;
+  border-radius: 8px; font-size: 0.82rem; color: var(--zp-text); cursor: pointer;
+  text-decoration: none; transition: background 0.12s; border: none; background: none;
+  width: 100%; text-align: left; font-family: inherit;
+}
+.zp-drop-item i { width: 14px; color: var(--zp-muted); font-size: 0.8rem; }
+.zp-drop-item:hover { background: var(--zp-green-light); color: var(--zp-text); }
+.zp-drop-item:hover i { color: var(--zp-green); }
+.zp-drop-item.danger { color: #dc2626; }
+.zp-drop-item.danger i { color: #dc2626; }
+.zp-drop-item.danger:hover { background: rgba(239,68,68,0.08); }
+.zp-drop-sep { height: 1px; background: var(--zp-border); margin: 0.35rem 0; }
+
+/* ── Modals (shared) ─────────────────────────────────────────────────────── */
+.zp-modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.52);
+  z-index: 900; align-items: center; justify-content: center; padding: 1rem;
+}
+.zp-modal-overlay.open { display: flex; }
+.zp-modal {
+  background: var(--zp-white); border: 1px solid var(--zp-border); border-radius: 16px;
+  padding: 2rem; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 16px 56px rgba(0,0,0,0.2);
+}
+.zp-modal h3 { font-size: 1.15rem; font-weight: 700; color: var(--zp-text); margin-bottom: 0.4rem; }
+.zp-modal p { font-size: 0.82rem; color: var(--zp-muted); margin-bottom: 1.25rem; line-height: 1.6; }
+.zp-field { margin-bottom: 1rem; }
+.zp-field label { display: block; font-size: 0.68rem; font-weight: 700; color: var(--zp-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+.zp-field input { width: 100%; padding: 0.55rem 0.8rem; border-radius: 8px; border: 1px solid var(--zp-border); background: var(--zp-surface); color: var(--zp-text); font-size: 0.875rem; font-family: inherit; }
+.zp-field input:focus { outline: none; border-color: var(--zp-green); box-shadow: 0 0 0 3px rgba(29,158,117,0.12); }
+.zp-modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+.zp-btn-cancel { padding: 0.5rem 1.25rem; border-radius: 8px; border: 1px solid var(--zp-border); background: transparent; color: var(--zp-muted); font-size: 0.875rem; cursor: pointer; font-family: inherit; }
+.zp-btn-cancel:hover { background: var(--zp-surface); color: var(--zp-text); }
+.zp-btn-primary { padding: 0.5rem 1.4rem; border-radius: 8px; border: none; background: var(--zp-green); color: #fff; font-size: 0.875rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.zp-btn-primary:hover { background: var(--zp-green-dark); }
+
+/* ── Profile pic preview ─────────────────────────────────────────────────── */
+.zp-avatar-upload { display: flex; flex-direction: column; align-items: center; gap: 0.85rem; margin: 1rem 0; }
+.zp-avatar-preview {
+  width: 80px; height: 80px; border-radius: 50%; overflow: hidden;
+  background: var(--zp-green); display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; font-weight: 700; color: #fff; border: 3px solid var(--zp-border);
+  cursor: pointer; position: relative; flex-shrink: 0;
+}
+.zp-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.zp-avatar-preview-hover {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s; border-radius: 50%;
+}
+.zp-avatar-preview:hover .zp-avatar-preview-hover { opacity: 1; }
+.zp-avatar-preview-hover i { color: #fff; font-size: 1.1rem; }
+#photoFileInput { display: none; }
+
+/* ── Welcome modal ───────────────────────────────────────────────────────── */
+.wm-welcome {
+  text-align: center;
+}
+.wm-logo { font-size: 3.5rem; margin-bottom: 0.75rem; }
+.wm-features { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1.25rem 0; }
+.wm-feature {
+  background: var(--zp-surface); border: 1px solid var(--zp-border);
+  border-radius: 10px; padding: 0.85rem; text-align: left;
+}
+.wm-feature i { color: var(--zp-green); font-size: 1rem; margin-bottom: 0.4rem; display: block; }
+.wm-feature strong { display: block; font-size: 0.8rem; color: var(--zp-text); margin-bottom: 0.15rem; }
+.wm-feature p { font-size: 0.72rem; color: var(--zp-muted); margin: 0; }
+
+/* ── Onboarding steps ────────────────────────────────────────────────────── */
+.ob-step { display: none; }
+.ob-step.active { display: block; }
+.ob-progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 1.25rem; }
+.ob-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--zp-border); }
+.ob-dot.active { background: var(--zp-green); }
+
+/* ── Topbar avatar ───────────────────────────────────────────────────────── */
+.zp-topbar-avatar {
+  width: 34px; height: 34px; border-radius: 50%; overflow: hidden;
+  background: var(--zp-green); display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; font-weight: 700; color: #fff; flex-shrink: 0; cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+.zp-topbar-avatar img { width: 100%; height: 100%; object-fit: cover; }
+</style>
 </head>
 <body class="zim-body">
   <% const _u = locals.user || null; %>
@@ -20,6 +122,8 @@
   <% const roleLabel = roleMap[_u?.role] || _u?.role || 'Guest'; %>
   <% const initials = _u?.name ? _u.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase() : 'ZP'; %>
   <% const currentSection = locals.section || 'dashboard'; %>
+  <% const isAdmin = _u?.role === 'authority_admin'; %>
+  <% const isFirstLogin = _u?.first_login === true; %>
 
   <% if (_u) { %>
     <div class="zim-shell">
@@ -34,74 +138,59 @@
 
         <nav class="zim-nav">
           <a class="zim-nav-link <%= currentSection === 'dashboard' ? 'active' : '' %>" href="/dashboard">
-            <i class="fa-solid fa-house"></i>
-            <span>Dashboard</span>
+            <i class="fa-solid fa-house"></i><span>Dashboard</span>
             <span class="nav-status nav-status--orange" title="Partial — some live data"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'parks' ? 'active' : '' %>" href="/dashboard/parks">
-            <i class="fa-solid fa-tree"></i>
-            <span>Parks</span>
+            <i class="fa-solid fa-tree"></i><span>Parks</span>
             <span class="nav-status nav-status--green" title="Live — real data &amp; map"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'revenue' ? 'active' : '' %>" href="/dashboard/revenue">
-            <i class="fa-solid fa-dollar-sign"></i>
-            <span>Revenue</span>
+            <i class="fa-solid fa-dollar-sign"></i><span>Revenue</span>
             <span class="nav-status nav-status--orange" title="Partial — estimated calculations"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'environment' ? 'active' : '' %>" href="/dashboard/alerts">
-            <i class="fa-solid fa-leaf"></i>
-            <span>Environment</span>
+            <i class="fa-solid fa-leaf"></i><span>Environment</span>
             <span class="nav-status nav-status--orange" title="Partial — uses alerts view"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'maintenance' ? 'active' : '' %>" href="/dashboard/alerts">
-            <i class="fa-solid fa-screwdriver-wrench"></i>
-            <span>Maintenance</span>
+            <i class="fa-solid fa-screwdriver-wrench"></i><span>Maintenance</span>
             <span class="nav-status nav-status--red" title="Demo — no dedicated view yet"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'reports' ? 'active' : '' %>" href="/dashboard/revenue">
-            <i class="fa-solid fa-chart-column"></i>
-            <span>Reports</span>
+            <i class="fa-solid fa-chart-column"></i><span>Reports</span>
             <span class="nav-status nav-status--orange" title="Partial — CSV export only"></span>
           </a>
           <a class="zim-nav-link <%= currentSection === 'visitors' ? 'active' : '' %>" href="/dashboard/visitors">
-            <i class="fa-solid fa-users"></i>
-            <span>Visitors</span>
+            <i class="fa-solid fa-users"></i><span>Visitors</span>
             <span class="nav-status nav-status--orange" title="Partial — real data, basic view"></span>
           </a>
-          <% if (_u && _u.role === 'authority_admin') { %>
+          <% if (isAdmin) { %>
           <a class="zim-nav-link <%= currentSection === 'users' ? 'active' : '' %>" href="/dashboard/users">
-            <i class="fa-solid fa-user-gear"></i>
-            <span>Users</span>
+            <i class="fa-solid fa-user-gear"></i><span>Users</span>
             <span class="nav-status nav-status--green" title="Live — full CRUD working"></span>
           </a>
           <% } %>
-          <a class="zim-nav-link <%= currentSection === 'settings' ? 'active' : '' %>" href="/dashboard/settings">
-            <i class="fa-solid fa-gear"></i>
-            <span>Settings</span>
-            <span class="nav-status nav-status--red" title="Demo — not yet built"></span>
-          </a>
         </nav>
 
         <a class="zim-logout" href="/logout">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          <span>Logout</span>
+          <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
         </a>
       </aside>
 
+      <!-- Mobile sidebar -->
       <div class="offcanvas offcanvas-start zim-offcanvas" tabindex="-1" id="mobileSidebar">
         <div class="offcanvas-header border-bottom">
           <div class="zim-sidebar-brand mb-0">
             <img src="/public/images/logo.png" alt="ZimParks logo" class="zim-brand-logo">
-            <div>
-              <h1>ZIMPARKS</h1>
-              <p>WILDLIFE · HERITAGE · HOSPITALITY</p>
-            </div>
+            <div><h1>ZIMPARKS</h1><p>WILDLIFE · HERITAGE · HOSPITALITY</p></div>
           </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body">
           <nav class="zim-nav">
             <a class="zim-nav-link <%= currentSection === 'dashboard' ? 'active' : '' %>" href="/dashboard"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+            <a class="zim-nav-link <%= currentSection === 'parks' ? 'active' : '' %>" href="/dashboard/parks"><i class="fa-solid fa-tree"></i><span>Parks</span></a>
             <a class="zim-nav-link <%= currentSection === 'visitors' ? 'active' : '' %>" href="/dashboard/visitors"><i class="fa-solid fa-users"></i><span>Visitors</span></a>
             <a class="zim-nav-link <%= currentSection === 'revenue' ? 'active' : '' %>" href="/dashboard/revenue"><i class="fa-solid fa-dollar-sign"></i><span>Revenue</span></a>
             <a class="zim-nav-link <%= currentSection === 'alerts' ? 'active' : '' %>" href="/dashboard/alerts"><i class="fa-solid fa-triangle-exclamation"></i><span>Alerts</span></a>
@@ -118,10 +207,7 @@
             </button>
             <div class="zim-topbar-brand d-lg-none">
               <img src="/public/images/logo.png" alt="ZimParks logo" class="zim-brand-logo zim-brand-logo--small">
-              <div>
-                <strong>ZIMPARKS</strong>
-                <span>HQ Dashboard</span>
-              </div>
+              <div><strong>ZIMPARKS</strong><span>HQ Dashboard</span></div>
             </div>
           </div>
 
@@ -132,10 +218,7 @@
               <i class="fa-solid fa-chevron-down"></i>
             </div>
             <% if (locals.showFiltersButton) { %>
-              <button class="zim-filter-btn" type="button">
-                <i class="fa-solid fa-filter"></i>
-                <span>Filters</span>
-              </button>
+              <button class="zim-filter-btn" type="button"><i class="fa-solid fa-filter"></i><span>Filters</span></button>
             <% } %>
             <button class="zim-theme-btn" type="button" id="themeToggle" aria-label="Toggle theme" title="Toggle dark/light mode">
               <i class="fa-solid fa-moon" id="themeIcon"></i>
@@ -144,13 +227,42 @@
               <i class="fa-regular fa-bell"></i>
               <span class="zim-bell-count"><%= locals.notificationCount || 0 %></span>
             </button>
-            <div class="zim-profile">
-              <div class="zim-profile-avatar"><%= initials %></div>
-              <div class="d-none d-md-block">
-                <strong><%= roleLabel %></strong>
-                <span><%= _u?.name || 'ZimParks User' %></span>
+
+            <!-- Profile menu -->
+            <div class="zp-profile-menu" id="profileMenu">
+              <div class="zp-topbar-avatar" id="profileMenuToggle" title="Account">
+                <% if (_u.photo_url) { %>
+                  <img src="<%= _u.photo_url %>" alt="<%= _u.name %>">
+                <% } else { %>
+                  <%= initials %>
+                <% } %>
               </div>
-              <i class="fa-solid fa-chevron-down"></i>
+              <div class="zp-profile-dropdown">
+                <div class="zp-drop-header">
+                  <strong><%= _u.name || 'ZimParks User' %></strong>
+                  <span><%= roleLabel %></span>
+                </div>
+
+                <button class="zp-drop-item" onclick="openProfileModal()">
+                  <i class="fa-solid fa-user-circle"></i> My Profile &amp; Photo
+                </button>
+                <button class="zp-drop-item" onclick="openChangePwModal()">
+                  <i class="fa-solid fa-key"></i> Change Password
+                </button>
+                <% if (isAdmin) { %>
+                <div class="zp-drop-sep"></div>
+                <a class="zp-drop-item" href="/dashboard/users">
+                  <i class="fa-solid fa-user-gear"></i> Manage Users
+                </a>
+                <button class="zp-drop-item" onclick="openSettingsModal()">
+                  <i class="fa-solid fa-gear"></i> Settings
+                </button>
+                <% } %>
+                <div class="zp-drop-sep"></div>
+                <a class="zp-drop-item danger" href="/logout">
+                  <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </a>
+              </div>
             </div>
           </div>
         </header>
@@ -161,35 +273,354 @@
       </div>
     </div>
   <% } else { %>
-    <main class="container-fluid px-0">
-      <%- body %>
-    </main>
+    <main class="container-fluid px-0"><%- body %></main>
   <% } %>
+
+  <!-- ── Change Password Modal ────────────────────────────────────────────── -->
+  <div class="zp-modal-overlay" id="changePwModal">
+    <div class="zp-modal">
+      <h3><i class="fa-solid fa-key" style="color:var(--zp-green);margin-right:8px"></i>Change Password</h3>
+      <p>Enter your current password, then set a new one.</p>
+      <div class="zp-field">
+        <label>Current Password</label>
+        <input type="password" id="cpCurrent" placeholder="Your current password">
+      </div>
+      <div class="zp-field">
+        <label>New Password</label>
+        <input type="password" id="cpNew" placeholder="At least 6 characters">
+      </div>
+      <div class="zp-field">
+        <label>Confirm New Password</label>
+        <input type="password" id="cpConfirm" placeholder="Repeat new password">
+      </div>
+      <div id="cpError" style="display:none;font-size:0.78rem;color:#dc2626;margin-top:0.25rem"></div>
+      <div class="zp-modal-actions">
+        <button class="zp-btn-cancel" onclick="closeChangePwModal()">Cancel</button>
+        <button class="zp-btn-primary" onclick="submitChangePw()">Update Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Profile Photo Modal ──────────────────────────────────────────────── -->
+  <div class="zp-modal-overlay" id="profileModal">
+    <div class="zp-modal" style="max-width:380px;text-align:center">
+      <h3>My Profile</h3>
+      <p>Click your avatar to upload a new profile photo (max 5 MB).</p>
+      <div class="zp-avatar-upload">
+        <div class="zp-avatar-preview" onclick="document.getElementById('photoFileInput').click()">
+          <% if (_u && _u.photo_url) { %>
+            <img src="<%= _u.photo_url %>" alt="Profile" id="avatarPreviewImg">
+          <% } else { %>
+            <span id="avatarPreviewInitials"><%= initials %></span>
+            <img src="" alt="" id="avatarPreviewImg" style="display:none">
+          <% } %>
+          <div class="zp-avatar-preview-hover"><i class="fa-solid fa-camera"></i></div>
+        </div>
+        <input type="file" id="photoFileInput" accept="image/*" onchange="previewPhoto(this)">
+        <div>
+          <strong style="font-size:0.9rem;color:var(--zp-text)"><%= _u ? _u.name : '' %></strong><br>
+          <span style="font-size:0.75rem;color:var(--zp-muted)"><%= _u ? _u.email : '' %></span>
+        </div>
+      </div>
+      <div id="photoUploadStatus" style="font-size:0.78rem;margin-bottom:0.5rem"></div>
+      <div class="zp-modal-actions" style="justify-content:center;gap:0.6rem">
+        <button class="zp-btn-cancel" onclick="closeProfileModal()">Close</button>
+        <button class="zp-btn-primary" id="uploadPhotoBtn" onclick="uploadPhoto()" style="display:none">Save Photo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Settings Modal (admin) ───────────────────────────────────────────── -->
+  <div class="zp-modal-overlay" id="settingsModal">
+    <div class="zp-modal">
+      <h3><i class="fa-solid fa-gear" style="color:var(--zp-green);margin-right:8px"></i>System Settings</h3>
+      <p>Manage system-level configuration for Parks Connect.</p>
+      <div style="display:grid;gap:0.75rem">
+        <div style="padding:1rem;background:var(--zp-surface);border:1px solid var(--zp-border);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:1rem">
+          <div>
+            <strong style="font-size:0.875rem;color:var(--zp-text);display:block">Dark Mode</strong>
+            <span style="font-size:0.75rem;color:var(--zp-muted)">Toggle interface theme</span>
+          </div>
+          <button onclick="toggleThemeFromSettings()" class="zp-btn-primary" style="white-space:nowrap" id="themeSettingsBtn">
+            <i class="fa-solid fa-moon"></i> Toggle
+          </button>
+        </div>
+        <div style="padding:1rem;background:var(--zp-surface);border:1px solid var(--zp-border);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:1rem">
+          <div>
+            <strong style="font-size:0.875rem;color:var(--zp-text);display:block">User Management</strong>
+            <span style="font-size:0.75rem;color:var(--zp-muted)">Create, edit and manage staff accounts</span>
+          </div>
+          <a href="/dashboard/users" class="zp-btn-primary" style="text-decoration:none;white-space:nowrap">Open</a>
+        </div>
+        <div style="padding:1rem;background:var(--zp-surface);border:1px solid var(--zp-border);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:1rem">
+          <div>
+            <strong style="font-size:0.875rem;color:var(--zp-text);display:block">Public Parks Page</strong>
+            <span style="font-size:0.75rem;color:var(--zp-muted)">Tourist-facing park explorer</span>
+          </div>
+          <a href="/parks" target="_blank" class="zp-btn-primary" style="text-decoration:none;white-space:nowrap">View</a>
+        </div>
+      </div>
+      <div class="zp-modal-actions">
+        <button class="zp-btn-cancel" onclick="closeSettingsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── First Login Welcome Modal ────────────────────────────────────────── -->
+  <div class="zp-modal-overlay" id="welcomeModal" style="z-index:950">
+    <div class="zp-modal" style="max-width:520px">
+
+      <!-- Step 1: Welcome -->
+      <div class="ob-step active" id="ob-step-1">
+        <div class="wm-welcome">
+          <div class="wm-logo">🌿</div>
+          <h3 style="font-size:1.4rem;margin-bottom:0.5rem">Welcome to Parks Connect!</h3>
+          <p style="font-size:0.88rem">Hi <strong id="wm-name"></strong>! Your account is all set. Here's what you can do in the system.</p>
+          <div class="wm-features">
+            <div class="wm-feature"><i class="fa-solid fa-tree"></i><strong>Parks Overview</strong><p>Monitor all national parks, visitor stats and assigned officers.</p></div>
+            <div class="wm-feature"><i class="fa-solid fa-users"></i><strong>Visitor Tracking</strong><p>Log and analyse visitor numbers in real time.</p></div>
+            <div class="wm-feature"><i class="fa-solid fa-triangle-exclamation"></i><strong>Alerts</strong><p>Get notified when thresholds are exceeded or incidents reported.</p></div>
+            <div class="wm-feature"><i class="fa-solid fa-chart-column"></i><strong>Reports</strong><p>Export CSV reports and view analytics dashboards.</p></div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:0.5rem">
+          <button class="zp-btn-primary" onclick="nextObStep(2)">Get Started <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- Step 2: Change password -->
+      <div class="ob-step" id="ob-step-2">
+        <div class="ob-progress">
+          <div class="ob-dot"></div><div class="ob-dot active"></div><div class="ob-dot"></div>
+        </div>
+        <h3><i class="fa-solid fa-key" style="color:var(--zp-green);margin-right:8px"></i>Set Your Password</h3>
+        <p>Your current password is your National ID number. Please set a new personal password now.</p>
+        <div class="zp-field">
+          <label>Current Password (your ID number)</label>
+          <input type="password" id="ob-cur-pw" placeholder="Your ID number — no spaces, lowercase">
+        </div>
+        <div class="zp-field">
+          <label>New Password</label>
+          <input type="password" id="ob-new-pw" placeholder="Choose a strong password">
+        </div>
+        <div class="zp-field">
+          <label>Confirm New Password</label>
+          <input type="password" id="ob-conf-pw" placeholder="Repeat new password">
+        </div>
+        <div id="ob-pw-error" style="display:none;font-size:0.78rem;color:#dc2626;margin-bottom:0.5rem"></div>
+        <div style="display:flex;gap:0.6rem;justify-content:flex-end;margin-top:0.5rem">
+          <button class="zp-btn-cancel" onclick="nextObStep(3)" style="font-size:0.78rem">Skip for now</button>
+          <button class="zp-btn-primary" onclick="submitObPassword()">Set Password &amp; Continue</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Profile photo -->
+      <div class="ob-step" id="ob-step-3">
+        <div class="ob-progress">
+          <div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot active"></div>
+        </div>
+        <h3><i class="fa-solid fa-user-circle" style="color:var(--zp-green);margin-right:8px"></i>Add a Profile Photo</h3>
+        <p>Upload a profile photo so your colleagues can recognise you across the system. You can do this later from the profile menu.</p>
+        <div class="zp-avatar-upload">
+          <div class="zp-avatar-preview" onclick="document.getElementById('obPhotoInput').click()">
+            <span id="obAvatarInitials"></span>
+            <img src="" alt="" id="obAvatarImg" style="display:none">
+            <div class="zp-avatar-preview-hover"><i class="fa-solid fa-camera"></i></div>
+          </div>
+          <input type="file" id="obPhotoInput" accept="image/*" onchange="previewObPhoto(this)" style="display:none">
+          <span style="font-size:0.78rem;color:var(--zp-muted)">Click to choose a photo</span>
+        </div>
+        <div id="ob-photo-status" style="font-size:0.78rem;text-align:center;margin-bottom:0.5rem"></div>
+        <div style="display:flex;gap:0.6rem;justify-content:flex-end;margin-top:0.5rem">
+          <button class="zp-btn-cancel" onclick="finishOnboarding()">Skip &amp; Go to Dashboard</button>
+          <button class="zp-btn-primary" id="obUploadBtn" onclick="uploadObPhoto()" style="display:none">Save Photo &amp; Continue</button>
+          <button class="zp-btn-primary" id="obSkipPhoto" onclick="finishOnboarding()">Go to Dashboard</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    (function () {
-      const btn = document.getElementById('themeToggle');
-      const icon = document.getElementById('themeIcon');
-      if (!btn) return;
+  // ── Theme toggle ───────────────────────────────────────────────────────────
+  (function () {
+    const btn = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+    if (!btn) return;
+    function applyTheme(dark) {
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      if (icon) icon.className = dark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    }
+    const saved = localStorage.getItem('zp-theme');
+    applyTheme(saved === 'dark');
+    btn.addEventListener('click', function () {
+      const next = document.documentElement.getAttribute('data-theme') !== 'dark';
+      localStorage.setItem('zp-theme', next ? 'dark' : 'light');
+      applyTheme(next);
+    });
+  })();
 
-      function applyTheme(dark) {
-        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-        if (icon) {
-          icon.className = dark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-        }
-      }
+  function toggleThemeFromSettings() {
+    const next = document.documentElement.getAttribute('data-theme') !== 'dark';
+    localStorage.setItem('zp-theme', next ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
+    const icon = document.getElementById('themeIcon');
+    if (icon) icon.className = next ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+  }
 
-      const saved = localStorage.getItem('zp-theme');
-      applyTheme(saved === 'dark');
+  // ── Profile dropdown toggle ────────────────────────────────────────────────
+  const profileMenu = document.getElementById('profileMenu');
+  const profileMenuToggle = document.getElementById('profileMenuToggle');
+  if (profileMenuToggle) {
+    profileMenuToggle.addEventListener('click', e => {
+      e.stopPropagation();
+      profileMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', () => profileMenu.classList.remove('open'));
+  }
 
-      btn.addEventListener('click', function () {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const next = !isDark;
-        localStorage.setItem('zp-theme', next ? 'dark' : 'light');
-        applyTheme(next);
+  // ── Change Password ────────────────────────────────────────────────────────
+  function openChangePwModal() { document.getElementById('changePwModal').classList.add('open'); profileMenu.classList.remove('open'); }
+  function closeChangePwModal() { document.getElementById('changePwModal').classList.remove('open'); }
+  document.getElementById('changePwModal').addEventListener('click', e => { if (e.target.id === 'changePwModal') closeChangePwModal(); });
+
+  async function submitChangePw() {
+    const cur = document.getElementById('cpCurrent').value;
+    const nw = document.getElementById('cpNew').value;
+    const conf = document.getElementById('cpConfirm').value;
+    const errEl = document.getElementById('cpError');
+    errEl.style.display = 'none';
+    if (nw !== conf) { errEl.textContent = 'Passwords do not match'; errEl.style.display = 'block'; return; }
+    if (nw.length < 6) { errEl.textContent = 'New password must be at least 6 characters'; errEl.style.display = 'block'; return; }
+    try {
+      const r = await fetch('/dashboard/change-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: cur, new_password: nw })
       });
-    })();
+      const data = await r.json();
+      if (!r.ok) { errEl.textContent = data.message || 'Update failed'; errEl.style.display = 'block'; return; }
+      closeChangePwModal();
+      alert('Password updated successfully.');
+    } catch { errEl.textContent = 'Request failed'; errEl.style.display = 'block'; }
+  }
+
+  // ── Profile modal ──────────────────────────────────────────────────────────
+  let selectedPhotoFile = null;
+  function openProfileModal() { document.getElementById('profileModal').classList.add('open'); profileMenu.classList.remove('open'); }
+  function closeProfileModal() { document.getElementById('profileModal').classList.remove('open'); }
+  document.getElementById('profileModal').addEventListener('click', e => { if (e.target.id === 'profileModal') closeProfileModal(); });
+
+  function previewPhoto(input) {
+    if (!input.files[0]) return;
+    selectedPhotoFile = input.files[0];
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('avatarPreviewImg');
+      const init = document.getElementById('avatarPreviewInitials');
+      img.src = e.target.result; img.style.display = '';
+      if (init) init.style.display = 'none';
+      document.getElementById('uploadPhotoBtn').style.display = '';
+    };
+    reader.readAsDataURL(selectedPhotoFile);
+  }
+
+  async function uploadPhoto() {
+    if (!selectedPhotoFile) return;
+    const status = document.getElementById('photoUploadStatus');
+    status.textContent = 'Uploading…'; status.style.color = 'var(--zp-muted)';
+    const form = new FormData();
+    form.append('photo', selectedPhotoFile);
+    try {
+      const r = await fetch('/dashboard/upload-photo', { method: 'POST', body: form });
+      const data = await r.json();
+      if (!r.ok) { status.textContent = data.message || 'Upload failed'; status.style.color = '#dc2626'; return; }
+      status.textContent = 'Photo saved!'; status.style.color = '#16a34a';
+      // Update all avatars on page
+      document.querySelectorAll('.zp-topbar-avatar, .zp-avatar-preview').forEach(el => {
+        let img = el.querySelector('img');
+        if (!img) { img = document.createElement('img'); el.prepend(img); }
+        img.src = data.photo_url; img.style.display = '';
+        const init = el.querySelector('span');
+        if (init) init.style.display = 'none';
+      });
+      setTimeout(closeProfileModal, 1200);
+    } catch { status.textContent = 'Upload failed'; status.style.color = '#dc2626'; }
+  }
+
+  // ── Settings modal ─────────────────────────────────────────────────────────
+  function openSettingsModal() { document.getElementById('settingsModal').classList.add('open'); profileMenu.classList.remove('open'); }
+  function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('open'); }
+  document.getElementById('settingsModal').addEventListener('click', e => { if (e.target.id === 'settingsModal') closeSettingsModal(); });
+
+  // ── First Login / Onboarding ───────────────────────────────────────────────
+  const IS_FIRST_LOGIN = <%- JSON.stringify(isFirstLogin) %>;
+  const USER_NAME = <%- JSON.stringify(_u ? (_u.name || '') : '') %>;
+  const USER_INITIALS = <%- JSON.stringify(initials) %>;
+
+  if (IS_FIRST_LOGIN) {
+    document.getElementById('wm-name').textContent = USER_NAME.split(' ')[0] || USER_NAME;
+    document.getElementById('obAvatarInitials').textContent = USER_INITIALS;
+    document.getElementById('welcomeModal').classList.add('open');
+  }
+
+  function nextObStep(n) {
+    document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+    const next = document.getElementById('ob-step-' + n);
+    if (next) next.classList.add('active');
+  }
+
+  async function submitObPassword() {
+    const cur = document.getElementById('ob-cur-pw').value;
+    const nw = document.getElementById('ob-new-pw').value;
+    const conf = document.getElementById('ob-conf-pw').value;
+    const errEl = document.getElementById('ob-pw-error');
+    errEl.style.display = 'none';
+    if (nw !== conf) { errEl.textContent = 'Passwords do not match'; errEl.style.display = 'block'; return; }
+    if (nw.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.style.display = 'block'; return; }
+    try {
+      const r = await fetch('/dashboard/change-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: cur, new_password: nw })
+      });
+      const data = await r.json();
+      if (!r.ok) { errEl.textContent = data.message || 'Failed'; errEl.style.display = 'block'; return; }
+      nextObStep(3);
+    } catch { errEl.textContent = 'Request failed'; errEl.style.display = 'block'; }
+  }
+
+  let obPhotoFile = null;
+  function previewObPhoto(input) {
+    if (!input.files[0]) return;
+    obPhotoFile = input.files[0];
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('obAvatarImg');
+      const init = document.getElementById('obAvatarInitials');
+      img.src = e.target.result; img.style.display = '';
+      if (init) init.style.display = 'none';
+      document.getElementById('obUploadBtn').style.display = '';
+      document.getElementById('obSkipPhoto').style.display = 'none';
+    };
+    reader.readAsDataURL(obPhotoFile);
+  }
+
+  async function uploadObPhoto() {
+    if (!obPhotoFile) { finishOnboarding(); return; }
+    const status = document.getElementById('ob-photo-status');
+    status.textContent = 'Uploading…';
+    const form = new FormData();
+    form.append('photo', obPhotoFile);
+    try {
+      await fetch('/dashboard/upload-photo', { method: 'POST', body: form });
+    } catch {}
+    finishOnboarding();
+  }
+
+  async function finishOnboarding() {
+    try { await fetch('/dashboard/complete-onboarding', { method: 'POST' }); } catch {}
+    document.getElementById('welcomeModal').classList.remove('open');
+  }
   </script>
 </body>
 </html>

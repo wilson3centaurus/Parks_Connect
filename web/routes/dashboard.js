@@ -729,6 +729,24 @@ router.post('/parks/assign', ensureAuth, ensurePortalAccess, async (req, res) =>
   }
 });
 
+// Upload park photo (admin only — raw multipart forwarded to backend)
+router.post('/parks/:id/photo', ensureAuth, ensurePortalAccess, async (req, res) => {
+  if (req.session.user.role !== 'authority_admin') return res.status(403).json({ message: 'Forbidden' });
+  try {
+    const chunks = [];
+    await new Promise((resolve, reject) => { req.on('data', c => chunks.push(c)); req.on('end', resolve); req.on('error', reject); });
+    const rawBody = Buffer.concat(chunks);
+    const result = await axios.post(
+      `${backendUrl}/api/parks/${req.params.id}/photo`,
+      rawBody,
+      { headers: { Authorization: `Bearer ${req.session.token}`, 'Content-Type': req.headers['content-type'] } }
+    );
+    return res.json(result.data);
+  } catch (err) {
+    return res.status(err.response?.status || 500).json({ message: err.response?.data?.message || 'Upload failed' });
+  }
+});
+
 // ── User Management (admin-only) ─────────────────────────────────────────────
 
 router.get('/users', ensureAuth, ensurePortalAccess, async (req, res) => {
@@ -782,10 +800,10 @@ router.post('/users/:id/reset-password', ensureAuth, ensurePortalAccess, async (
   try {
     await axios.post(
       `${backendUrl}/api/auth/users/${req.params.id}/reset-password`,
-      { new_password: req.body.new_password },
+      {},
       { headers: { Authorization: `Bearer ${req.session.token}` } }
     );
-    res.redirect('/dashboard/users?success=Password+reset+successfully');
+    res.redirect('/dashboard/users?success=Password+reset+to+default+(ID+number)');
   } catch (err) {
     console.error(err.response?.data || err.message);
     const msg = err.response?.data?.message || 'Failed to reset password';
@@ -818,18 +836,90 @@ router.get('/settings', ensureAuth, ensurePortalAccess, async (req, res) => {
   });
 });
 
+// Change password — returns JSON (called from layout modal)
 router.post('/change-password', ensureAuth, async (req, res) => {
   try {
-    await axios.post(
+    const result = await axios.post(
       `${backendUrl}/api/auth/change-password`,
       { current_password: req.body.current_password, new_password: req.body.new_password },
+      { headers: { Authorization: `Bearer ${req.session.token}`, 'Content-Type': 'application/json' } }
+    );
+    // Update session first_login flag
+    if (req.session.user) req.session.user.first_login = false;
+    return res.json({ ok: true, message: result.data.message || 'Password updated' });
+  } catch (err) {
+    const msg = err.response?.data?.message || 'Failed to update password';
+    return res.status(err.response?.status || 500).json({ message: msg });
+  }
+});
+
+// Complete onboarding (mark first_login = false)
+router.post('/complete-onboarding', ensureAuth, async (req, res) => {
+  try {
+    await axios.post(
+      `${backendUrl}/api/auth/complete-onboarding`,
+      {},
       { headers: { Authorization: `Bearer ${req.session.token}` } }
     );
-    res.redirect('/dashboard?success=Password+updated');
+    if (req.session.user) req.session.user.first_login = false;
+    return res.json({ ok: true });
   } catch (err) {
-    console.error(err.response?.data || err.message);
-    const msg = err.response?.data?.message || 'Failed to update password';
-    res.redirect(`/dashboard?error=${encodeURIComponent(msg)}`);
+    return res.json({ ok: false });
+  }
+});
+
+// Upload profile photo (multipart — proxied to backend)
+router.post('/upload-photo', ensureAuth, async (req, res) => {
+  try {
+    const FormData = (await import('form-data')).default;
+    const form = new FormData();
+
+    // Collect body as buffer from request
+    const chunks = [];
+    await new Promise((resolve, reject) => {
+      req.on('data', c => chunks.push(c));
+      req.on('end', resolve);
+      req.on('error', reject);
+    });
+    const rawBody = Buffer.concat(chunks);
+
+    const result = await axios.post(
+      `${backendUrl}/api/auth/upload-photo`,
+      rawBody,
+      {
+        headers: {
+          Authorization: `Bearer ${req.session.token}`,
+          'Content-Type': req.headers['content-type']
+        }
+      }
+    );
+
+    if (result.data.photo_url && req.session.user) {
+      req.session.user.photo_url = result.data.photo_url;
+    }
+    return res.json(result.data);
+  } catch (err) {
+    const msg = err.response?.data?.message || 'Upload failed';
+    return res.status(err.response?.status || 500).json({ message: msg });
+  }
+});
+
+// Impersonate a user (admin only, requires impersonation key)
+router.post('/impersonate', ensureAuth, async (req, res) => {
+  if (req.session.user.role !== 'authority_admin') return res.status(403).json({ message: 'Forbidden' });
+  try {
+    const result = await axios.post(
+      `${backendUrl}/api/auth/impersonate`,
+      { target_user_id: req.body.target_user_id, impersonate_key: req.body.impersonate_key },
+      { headers: { Authorization: `Bearer ${req.session.token}`, 'Content-Type': 'application/json' } }
+    );
+    // Update session to the impersonated user
+    req.session.token = result.data.token;
+    req.session.user = result.data.user;
+    return res.json({ ok: true, redirect: result.data.redirect || '/dashboard' });
+  } catch (err) {
+    const msg = err.response?.data?.message || 'Impersonation failed';
+    return res.status(err.response?.status || 500).json({ message: msg });
   }
 });
 
