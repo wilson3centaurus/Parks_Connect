@@ -795,17 +795,18 @@ router.post('/users', ensureAuth, ensurePortalAccess, async (req, res) => {
       {
         name: req.body.name,
         email: req.body.email,
-        password: req.body.password,
+        id_number: req.body.id_number || null,
+        phone: req.body.phone || null,
         role: req.body.role,
         park_id: req.body.park_id || null
       },
       { headers: { Authorization: `Bearer ${req.session.token}` } }
     );
-    res.redirect('/dashboard/users?success=Account+created+successfully');
+    res.json({ ok: true, message: `Account for ${req.body.name} created. Welcome email sent.` });
   } catch (err) {
     console.error(err.response?.data || err.message);
     const msg = err.response?.data?.message || 'Failed to create user';
-    res.redirect(`/dashboard/users?error=${encodeURIComponent(msg)}`);
+    res.status(400).json({ ok: false, message: msg });
   }
 });
 
@@ -817,26 +818,26 @@ router.post('/users/:id/reset-password', ensureAuth, ensurePortalAccess, async (
       {},
       { headers: { Authorization: `Bearer ${req.session.token}` } }
     );
-    res.redirect('/dashboard/users?success=Password+reset+to+default+(ID+number)');
+    res.json({ ok: true, message: 'Password reset to default (ID number)' });
   } catch (err) {
     console.error(err.response?.data || err.message);
     const msg = err.response?.data?.message || 'Failed to reset password';
-    res.redirect(`/dashboard/users?error=${encodeURIComponent(msg)}`);
+    res.status(400).json({ ok: false, message: msg });
   }
 });
 
 router.post('/users/:id/delete', ensureAuth, ensurePortalAccess, async (req, res) => {
-  if (req.session.user.role !== 'authority_admin') return res.status(403).render('error', { message: 'Forbidden' });
+  if (req.session.user.role !== 'authority_admin') return res.status(403).json({ ok: false, message: 'Forbidden' });
   try {
     await axios.delete(
       `${backendUrl}/api/auth/users/${req.params.id}`,
       { headers: { Authorization: `Bearer ${req.session.token}` } }
     );
-    res.redirect('/dashboard/users?success=User+removed');
+    res.json({ ok: true });
   } catch (err) {
     console.error(err.response?.data || err.message);
     const msg = err.response?.data?.message || 'Failed to delete user';
-    res.redirect(`/dashboard/users?error=${encodeURIComponent(msg)}`);
+    res.status(400).json({ ok: false, message: msg });
   }
 });
 

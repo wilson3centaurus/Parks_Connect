@@ -159,6 +159,63 @@
   </article>
 </section>
 
+<% const feedbackRows = (locals.feedbackData && locals.feedbackData.rows) ? locals.feedbackData.rows : (locals.feedback || []); %>
+<% if (feedbackRows.length > 0) { %>
+<section class="mb-4">
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <div>
+        <h2>Recent Tourist Feedback</h2>
+        <small><%= feedbackRows.length %> submission<%= feedbackRows.length !== 1 ? 's' : '' %></small>
+      </div>
+    </div>
+    <div class="zim-table-wrap">
+      <table class="table zim-table">
+        <thead>
+          <tr>
+            <th>Visitor</th>
+            <th>Park</th>
+            <th>Rating</th>
+            <th>Category</th>
+            <th>Comments</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% feedbackRows.slice(0, 15).forEach(function(f) {
+            const stars = '★'.repeat(Number(f.rating) || 0) + '☆'.repeat(Math.max(0, 5 - (Number(f.rating) || 0)));
+            const ratingColor = Number(f.rating) >= 4 ? '#16a34a' : Number(f.rating) >= 3 ? '#b45309' : '#dc2626';
+          %>
+            <tr>
+              <td style="font-size:0.82rem"><%= f.submitted_by || 'Anonymous' %></td>
+              <td style="font-size:0.82rem;font-weight:600"><%= f.park_name || '—' %></td>
+              <td><span style="color:<%= ratingColor %>;font-size:0.85rem;letter-spacing:1px" title="<%= f.rating %>/5"><%= stars %></span></td>
+              <td><span style="font-size:0.72rem;padding:0.15rem 0.5rem;border-radius:5px;background:var(--zp-surface);border:1px solid var(--zp-border)"><%= (f.category || '—').replace(/_/g,' ') %></span></td>
+              <td style="font-size:0.8rem;color:var(--zp-muted);max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="<%= (f.comments || '').replace(/"/g, '&quot;') %>"><%= f.comments || '—' %></td>
+              <td style="font-size:0.78rem;color:var(--zp-muted);white-space:nowrap"><%= f.visit_date || (f.submitted_at ? new Date(f.submitted_at).toLocaleDateString('en-ZW') : '—') %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <% if ((locals.feedbackData && locals.feedbackData.pagination && locals.feedbackData.pagination.total > 15) || feedbackRows.length > 15) { %>
+    <div class="zim-footer-note mt-2 text-center" style="font-size:0.78rem">
+      Showing 15 of <%= locals.feedbackData?.pagination?.total || feedbackRows.length %> submissions
+    </div>
+    <% } %>
+  </article>
+</section>
+<% } else { %>
+<section class="mb-4">
+  <article class="zim-card">
+    <div class="zim-section-title">
+      <div><h2>Tourist Feedback</h2><small>No submissions yet</small></div>
+    </div>
+    <p style="padding:1.5rem;color:var(--zp-muted);font-size:0.875rem">No tourist feedback has been submitted yet. Submissions from the public <a href="/feedback" target="_blank" style="color:var(--zp-green)">/feedback</a> page will appear here.</p>
+  </article>
+</section>
+<% } %>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   (() => {

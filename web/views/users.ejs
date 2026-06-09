@@ -4,9 +4,6 @@
   .um-header { margin-bottom: 2rem; }
   .um-header h2 { font-size: 1.5rem; font-weight: 700; color: var(--zp-text); margin-bottom: 0.25rem; }
   .um-header p { font-size: 0.875rem; color: var(--zp-muted); }
-  .um-notice { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem; }
-  .um-notice.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #16a34a; }
-  .um-notice.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #dc2626; }
 
   .um-create-card {
     background: var(--zp-white); border: 1px solid var(--zp-border);
@@ -34,8 +31,9 @@
   .um-pw-preview i { color: var(--zp-green); }
   .um-pw-preview code { font-family: monospace; font-weight: 700; letter-spacing: 0.04em; }
 
-  .btn-create { padding: 0.6rem 1.5rem; border-radius: 8px; background: var(--zp-green); color: #fff; border: none; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+  .btn-create { padding: 0.6rem 1.5rem; border-radius: 8px; background: var(--zp-green); color: #fff; border: none; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
   .btn-create:hover { background: var(--zp-green-dark); }
+  .btn-create:disabled { opacity: 0.6; cursor: not-allowed; }
 
   .um-table-card {
     background: var(--zp-white); border: 1px solid var(--zp-border);
@@ -62,7 +60,7 @@
   .role-badge.tourism_operator { background: rgba(59,130,246,0.1); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.2); }
 
   .um-actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
-  .btn-reset, .btn-delete, .btn-imp { padding: 0.28rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .btn-reset, .btn-delete, .btn-imp { padding: 0.28rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; }
   .btn-reset { background: rgba(59,130,246,0.08); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.2); }
   .btn-reset:hover { background: rgba(59,130,246,0.18); }
   .btn-delete { background: rgba(239,68,68,0.08); color: #dc2626; border: 1px solid rgba(239,68,68,0.2); }
@@ -91,17 +89,10 @@
 </section>
 
 <div class="um-page">
-  <% if (locals.success) { %>
-    <div class="um-notice success"><i class="fa-solid fa-check-circle"></i> <%= locals.success %></div>
-  <% } %>
-  <% if (locals.error) { %>
-    <div class="um-notice error"><i class="fa-solid fa-circle-exclamation"></i> <%= locals.error %></div>
-  <% } %>
-
   <!-- Create account -->
   <div class="um-create-card">
     <h3><i class="fa-solid fa-user-plus" style="color:var(--zp-green);margin-right:6px"></i>Create Staff Account</h3>
-    <form action="/dashboard/users" method="POST" id="createForm">
+    <form id="createForm">
       <div class="um-grid">
         <div class="um-field">
           <label>Full Name *</label>
@@ -147,7 +138,9 @@
         Default password: <code id="pwPreviewText"></code>
       </div>
 
-      <button type="submit" class="btn-create"><i class="fa-solid fa-user-plus"></i> Create Account &amp; Send Welcome Email</button>
+      <button type="submit" class="btn-create" id="createBtn">
+        <i class="fa-solid fa-user-plus"></i> Create Account &amp; Send Welcome Email
+      </button>
     </form>
   </div>
 
@@ -155,13 +148,14 @@
   <div class="um-table-card">
     <div class="um-table-head">
       <h3>Staff Accounts</h3>
-      <span class="um-count"><%= locals.users ? locals.users.length : 0 %> accounts</span>
+      <span class="um-count" id="userCount"><%= locals.users ? locals.users.length : 0 %> accounts</span>
     </div>
+    <div id="usersTableWrap">
     <% if (!locals.users || locals.users.length === 0) { %>
       <p class="um-empty">No staff accounts yet. Create the first one above.</p>
     <% } else { %>
     <div style="overflow-x:auto">
-    <table>
+    <table id="usersTable">
       <thead>
         <tr>
           <th>Officer</th>
@@ -172,12 +166,12 @@
           <th>Actions</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="usersTableBody">
         <% locals.users.forEach(function(u) {
           const initials = u.name ? u.name.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase() : '?';
           const defaultPw = u.id_number ? u.id_number.replace(/\s+/g,'').toLowerCase() : '';
         %>
-          <tr>
+          <tr id="user-row-<%= u.id %>">
             <td>
               <div class="um-user-cell">
                 <div class="um-avatar">
@@ -201,11 +195,9 @@
             </td>
             <td>
               <div class="um-actions">
-                <button class="btn-reset" onclick="openResetModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>', '<%= defaultPw %>')">Reset PW</button>
+                <button class="btn-reset" onclick="resetPassword(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>', '<%= defaultPw %>')">Reset PW</button>
                 <button class="btn-imp" onclick="openImpersonateModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>')"><i class="fa-solid fa-user-secret"></i></button>
-                <form action="/dashboard/users/<%= u.id %>/delete" method="POST" style="margin:0" onsubmit="return confirm('Remove <%= u.name %>? This cannot be undone.')">
-                  <button type="submit" class="btn-delete">Remove</button>
-                </form>
+                <button class="btn-delete" onclick="deleteUser(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>')">Remove</button>
               </div>
             </td>
           </tr>
@@ -214,24 +206,7 @@
     </table>
     </div>
     <% } %>
-  </div>
-</div>
-
-<!-- Reset password modal -->
-<div class="um-modal-overlay" id="resetModal">
-  <div class="um-modal">
-    <h4><i class="fa-solid fa-key" style="color:var(--zp-green);margin-right:6px"></i>Reset Password</h4>
-    <p id="resetModalDesc">Resets password to the officer's ID number.</p>
-    <div style="background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);border-radius:8px;padding:0.65rem 1rem;margin-bottom:0.5rem;font-size:0.8rem;color:var(--zp-text)">
-      <i class="fa-solid fa-circle-info" style="color:var(--zp-green);margin-right:4px"></i>
-      Will be reset to: <code id="resetDefaultPw" style="font-weight:700;font-family:monospace;font-size:0.85rem"></code>
     </div>
-    <form id="resetForm" method="POST">
-      <div class="um-modal-actions">
-        <button type="button" class="btn-cancel" onclick="closeResetModal()">Cancel</button>
-        <button type="submit" class="btn-confirm">Reset to ID Number</button>
-      </div>
-    </form>
   </div>
 </div>
 
@@ -252,10 +227,11 @@
 </div>
 
 <script>
-  var roleSelect = document.getElementById('roleSelect');
-  var parkSelect = document.getElementById('parkSelect');
-  var idInput = document.getElementById('idNumberInput');
-  var pwPreview = document.getElementById('pwPreview');
+  // ── Role/Park wiring ─────────────────────────────────────────────────────────
+  var roleSelect  = document.getElementById('roleSelect');
+  var parkSelect  = document.getElementById('parkSelect');
+  var idInput     = document.getElementById('idNumberInput');
+  var pwPreview   = document.getElementById('pwPreview');
   var pwPreviewText = document.getElementById('pwPreviewText');
 
   function updateParkRequired() {
@@ -267,23 +243,106 @@
 
   idInput.addEventListener('input', function() {
     var id = idInput.value.trim().replace(/\s+/g,'').toLowerCase();
-    if (id.length >= 4) {
-      pwPreviewText.textContent = id;
-      pwPreview.style.display = 'flex';
-    } else {
-      pwPreview.style.display = 'none';
+    if (id.length >= 4) { pwPreviewText.textContent = id; pwPreview.style.display = 'flex'; }
+    else { pwPreview.style.display = 'none'; }
+  });
+
+  // ── Create account (AJAX + SweetAlert2) ─────────────────────────────────────
+  document.getElementById('createForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var btn = document.getElementById('createBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating…';
+
+    var data = Object.fromEntries(new FormData(this));
+    try {
+      var resp = await fetch('/dashboard/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify(data)
+      });
+      var result = await resp.json();
+      if (!resp.ok) throw new Error(result.message || 'Failed to create account');
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Account Created',
+        text: result.message || 'Account created and welcome email sent.',
+        confirmButtonColor: '#1D9E75',
+        confirmButtonText: 'OK'
+      });
+      window.location.reload();
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: err.message, confirmButtonColor: '#1D9E75' });
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create Account & Send Welcome Email';
     }
   });
 
-  function openResetModal(userId, name, defaultPw) {
-    document.getElementById('resetModalDesc').textContent = 'Reset password for ' + name + ' to their ID number.';
-    document.getElementById('resetDefaultPw').textContent = defaultPw || '(no ID on file — will prompt for new password)';
-    document.getElementById('resetForm').action = '/dashboard/users/' + userId + '/reset-password';
-    document.getElementById('resetModal').classList.add('open');
-  }
-  function closeResetModal() { document.getElementById('resetModal').classList.remove('open'); }
-  document.getElementById('resetModal').addEventListener('click', function(e) { if (e.target === this) closeResetModal(); });
+  // ── Reset password ───────────────────────────────────────────────────────────
+  async function resetPassword(userId, name, defaultPw) {
+    var result = await Swal.fire({
+      icon: 'question',
+      title: 'Reset Password',
+      html: `Reset <strong>${name}</strong>'s password to their ID number?<br><br>
+             <code style="background:rgba(29,158,117,0.1);padding:4px 10px;border-radius:6px;font-size:0.85rem">${defaultPw || '(no ID on file)'}</code>`,
+      showCancelButton: true,
+      confirmButtonColor: '#1D9E75',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Reset'
+    });
+    if (!result.isConfirmed) return;
 
+    try {
+      var resp = await fetch(`/dashboard/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      var data = await resp.json();
+      if (!resp.ok) throw new Error(data.message || 'Reset failed');
+      Swal.fire({ icon: 'success', title: 'Password Reset', text: data.message, confirmButtonColor: '#1D9E75' });
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: err.message, confirmButtonColor: '#1D9E75' });
+    }
+  }
+
+  // ── Delete user ──────────────────────────────────────────────────────────────
+  async function deleteUser(userId, name) {
+    var result = await Swal.fire({
+      icon: 'warning',
+      title: 'Remove Staff Account',
+      html: `Remove <strong>${name}</strong>? This cannot be undone.`,
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Remove'
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      var resp = await fetch(`/dashboard/users/${userId}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      var data = await resp.json();
+      if (!resp.ok) throw new Error(data.message || 'Delete failed');
+
+      // Remove row from DOM
+      var row = document.getElementById('user-row-' + userId);
+      if (row) row.remove();
+      var count = document.getElementById('userCount');
+      if (count) {
+        var n = parseInt(count.textContent) - 1;
+        count.textContent = n + ' accounts';
+      }
+      Swal.fire({ icon: 'success', title: 'Removed', text: name + ' has been removed.', confirmButtonColor: '#1D9E75', timer: 2000, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: err.message, confirmButtonColor: '#1D9E75' });
+    }
+  }
+
+  // ── Impersonate modal ────────────────────────────────────────────────────────
   var impTargetId = null;
   function openImpersonateModal(userId, name) {
     impTargetId = userId;
@@ -304,8 +363,8 @@
         body: JSON.stringify({ target_user_id: impTargetId, impersonate_key: key })
       });
       var data = await r.json();
-      if (!r.ok) { alert(data.message || 'Impersonation failed'); return; }
+      if (!r.ok) { Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'Impersonation failed', confirmButtonColor: '#1D9E75' }); return; }
       window.location.href = data.redirect || '/dashboard';
-    } catch (e) { alert('Request failed'); }
+    } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: 'Request failed', confirmButtonColor: '#1D9E75' }); }
   }
 </script>
