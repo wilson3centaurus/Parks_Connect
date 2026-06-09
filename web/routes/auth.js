@@ -2,7 +2,7 @@ import { Router } from 'express';
 import axios from 'axios';
 
 const router = Router();
-const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+const backendUrl = (process.env.BACKEND_URL || 'http://localhost:4000').replace(/\/+$/, '');
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const WEB_ROLES = new Set(['authority_admin', 'environment_officer', 'tourism_operator']);
 

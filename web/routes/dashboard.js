@@ -2,7 +2,7 @@ import { Router } from 'express';
 import axios from 'axios';
 
 const router = Router();
-const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+const backendUrl = (process.env.BACKEND_URL || 'http://localhost:4000').replace(/\/+$/, '');
 
 const ROLE_TO_PORTAL = {
   authority_admin: 'authority',
