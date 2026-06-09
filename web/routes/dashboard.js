@@ -729,6 +729,20 @@ router.post('/parks/assign', ensureAuth, ensurePortalAccess, async (req, res) =>
   }
 });
 
+// Remove park photo
+router.delete('/parks/:id/photo', ensureAuth, ensurePortalAccess, async (req, res) => {
+  if (req.session.user.role !== 'authority_admin') return res.status(403).json({ message: 'Forbidden' });
+  try {
+    const result = await axios.delete(
+      `${backendUrl}/api/parks/${req.params.id}/photo`,
+      { headers: { Authorization: `Bearer ${req.session.token}` } }
+    );
+    return res.json(result.data);
+  } catch (err) {
+    return res.status(err.response?.status || 500).json({ message: err.response?.data?.message || 'Failed' });
+  }
+});
+
 // Upload park photo (admin only — raw multipart forwarded to backend)
 router.post('/parks/:id/photo', ensureAuth, ensurePortalAccess, async (req, res) => {
   if (req.session.user.role !== 'authority_admin') return res.status(403).json({ message: 'Forbidden' });

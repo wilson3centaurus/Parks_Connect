@@ -237,22 +237,43 @@ const roleLabel = { authority_admin: 'HQ Admin', environment_officer: 'Park Mana
       : '<p style="color:var(--zp-muted);font-size:13px">No visitor logs yet</p>';
 
     document.getElementById('detailContent').innerHTML = `
-      <div class="detail-header" style="flex-wrap:wrap;gap:8px">
-        <div class="detail-park-icon" style="${park.photo_url ? 'padding:0;overflow:hidden' : ''}">
-          ${park.photo_url
-            ? `<img src="${park.photo_url}" style="width:44px;height:44px;object-fit:cover;border-radius:10px" onerror="this.parentElement.innerHTML='<i class=\\'fa-solid fa-tree\\'></i>'">`
-            : `<i class="fa-solid fa-tree"></i>`}
+      <div class="detail-header">
+        <div class="detail-park-icon">
+          <i class="fa-solid fa-tree"></i>
         </div>
-        <div style="flex:1;min-width:0">
+        <div>
           <h3>${park.name}</h3>
           <span><i class="fa-solid fa-location-dot"></i> ${park.region}</span>
         </div>
-        ${IS_ADMIN && park.id ? `
-        <label style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid var(--zp-green);background:transparent;color:var(--zp-green);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-          <i class="fa-solid fa-camera"></i> ${park.photo_url ? 'Change' : 'Add'} Photo
-          <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadParkPhoto(${park.id}, this)">
-        </label>` : ''}
       </div>
+
+      ${IS_ADMIN && park.id ? `
+      <div class="detail-section" id="parkImgSection">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="margin:0">Park Image</label>
+          <span style="font-size:10px;color:var(--zp-muted)">Shown on tourist page &amp; home</span>
+        </div>
+        <div id="parkImgPreview" style="width:100%;height:160px;border-radius:10px;overflow:hidden;border:1px solid var(--zp-border);background:var(--zp-surface);display:flex;align-items:center;justify-content:center;margin-bottom:8px;position:relative">
+          ${park.photo_url
+            ? `<img src="${park.photo_url}" id="parkImgEl" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';document.getElementById('parkImgPlaceholder').style.display='flex'">`
+            : ''}
+          <div id="parkImgPlaceholder" style="display:${park.photo_url ? 'none' : 'flex'};flex-direction:column;align-items:center;gap:6px;color:var(--zp-muted)">
+            <i class="fa-regular fa-image" style="font-size:2rem;opacity:0.4"></i>
+            <span style="font-size:11px">No image uploaded yet</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <label id="parkImgUploadBtn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid var(--zp-green);background:transparent;color:var(--zp-green);font-size:12px;font-weight:700;cursor:pointer">
+            <i class="fa-solid fa-camera"></i>
+            <span id="parkImgBtnText">${park.photo_url ? 'Change Image' : 'Upload Image'}</span>
+            <input type="file" id="parkImgFileInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadParkPhoto(${park.id}, this)">
+          </label>
+          ${park.photo_url ? `
+          <button id="parkImgRemoveBtn" onclick="clearParkPhoto(${park.id})" style="padding:7px 12px;border-radius:8px;border:1px solid var(--zp-border);background:transparent;color:var(--zp-muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit">
+            <i class="fa-solid fa-trash-can"></i> Remove
+          </button>` : ''}
+        </div>
+      </div>` : ''}
 
       <p class="detail-desc">${park.desc}</p>
 
@@ -340,27 +361,71 @@ const roleLabel = { authority_admin: 'HQ Admin', environment_officer: 'Park Mana
   // ── Park photo upload ─────────────────────────────────────────────
   window.uploadParkPhoto = async function(parkId, input) {
     if (!input.files.length) return;
-    const label = input.parentElement;
-    const orig = label.innerHTML;
-    label.style.opacity = '0.5';
-    label.style.pointerEvents = 'none';
+    const uploadBtn = document.getElementById('parkImgUploadBtn');
+    const btnText = document.getElementById('parkImgBtnText');
+    if (uploadBtn) { uploadBtn.style.opacity = '0.5'; uploadBtn.style.pointerEvents = 'none'; }
+    if (btnText) btnText.textContent = 'Uploading…';
     try {
       const form = new FormData();
       form.append('photo', input.files[0]);
       const resp = await fetch(`/dashboard/parks/${parkId}/photo`, { method: 'POST', body: form });
       const data = await resp.json();
       if (!resp.ok) { alert(data.message || 'Upload failed'); return; }
-      // Update icon in detail header
-      const iconEl = document.querySelector('.detail-park-icon');
-      if (iconEl) { iconEl.style = 'padding:0;overflow:hidden'; iconEl.innerHTML = `<img src="${data.photo_url}" style="width:44px;height:44px;object-fit:cover;border-radius:10px">`; }
+      // Update preview
+      const preview = document.getElementById('parkImgPreview');
+      const placeholder = document.getElementById('parkImgPlaceholder');
+      if (preview) {
+        let img = document.getElementById('parkImgEl');
+        if (!img) {
+          img = document.createElement('img');
+          img.id = 'parkImgEl';
+          img.style = 'width:100%;height:100%;object-fit:cover';
+          img.onerror = () => { img.style.display = 'none'; if (placeholder) placeholder.style.display = 'flex'; };
+          preview.insertBefore(img, preview.firstChild);
+        }
+        img.src = data.photo_url;
+        img.style.display = '';
+        if (placeholder) placeholder.style.display = 'none';
+      }
+      // Show remove button if not already present
+      const btnRow = document.querySelector('#parkImgSection > div:last-child');
+      if (btnRow && !document.getElementById('parkImgRemoveBtn')) {
+        const removeBtn = document.createElement('button');
+        removeBtn.id = 'parkImgRemoveBtn';
+        removeBtn.style = 'padding:7px 12px;border-radius:8px;border:1px solid var(--zp-border);background:transparent;color:var(--zp-muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit';
+        removeBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> Remove';
+        removeBtn.onclick = () => clearParkPhoto(parkId);
+        btnRow.appendChild(removeBtn);
+      }
       // Update local data so reopening the drawer shows the new photo
       const pk = ALL_PARKS.find(p => p.id === parkId);
       if (pk) pk.photo_url = data.photo_url;
-      // Update button label
-      label.querySelector('input').remove();
-      label.innerHTML = `<i class="fa-solid fa-circle-check"></i> Photo saved <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadParkPhoto(${parkId}, this)">`;
+      if (btnText) btnText.textContent = 'Change Image';
     } catch { alert('Network error. Please try again.'); }
-    finally { label.style.opacity = ''; label.style.pointerEvents = ''; }
+    finally { if (uploadBtn) { uploadBtn.style.opacity = ''; uploadBtn.style.pointerEvents = ''; } }
+  };
+
+  // ── Park photo remove ─────────────────────────────────────────────
+  window.clearParkPhoto = async function(parkId) {
+    if (!confirm('Remove this park image?')) return;
+    const removeBtn = document.getElementById('parkImgRemoveBtn');
+    if (removeBtn) { removeBtn.style.opacity = '0.5'; removeBtn.style.pointerEvents = 'none'; }
+    try {
+      const resp = await fetch(`/dashboard/parks/${parkId}/photo`, { method: 'DELETE' });
+      if (!resp.ok) { const d = await resp.json(); alert(d.message || 'Failed to remove photo'); return; }
+      // Reset preview
+      const img = document.getElementById('parkImgEl');
+      if (img) img.remove();
+      const placeholder = document.getElementById('parkImgPlaceholder');
+      if (placeholder) placeholder.style.display = 'flex';
+      // Hide remove button
+      if (removeBtn) removeBtn.remove();
+      // Update local data
+      const pk = ALL_PARKS.find(p => p.id === parkId);
+      if (pk) pk.photo_url = null;
+      const btnText = document.getElementById('parkImgBtnText');
+      if (btnText) btnText.textContent = 'Upload Image';
+    } catch { alert('Network error. Please try again.'); }
   };
 
   // ── Resize map on panel toggle ────────────────────────────────────
@@ -572,6 +637,15 @@ const roleLabel = { authority_admin: 'HQ Admin', environment_officer: 'Park Mana
 .detail-header span { font-size: 12px; color: var(--zp-muted); }
 
 .detail-desc { font-size: 12px; color: var(--zp-muted); line-height: 1.5; margin-bottom: 12px; }
+
+.detail-section {
+  background: var(--zp-surface);
+  border: 1px solid var(--zp-border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.detail-section label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--zp-muted); }
 
 .detail-kpis {
   display: grid;

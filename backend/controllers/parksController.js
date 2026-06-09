@@ -165,6 +165,19 @@ export async function uploadParkPhoto(req, res) {
   }
 }
 
+export async function clearParkPhoto(req, res) {
+  const parkId = Number(req.params.id);
+  if (!parkId) return res.status(400).json({ message: 'Invalid park ID' });
+  try {
+    const db = await getDb();
+    await db.run(`UPDATE parks SET photo_url = NULL WHERE id = ?`, [parkId]);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[park photo clear]', err.message);
+    return res.status(500).json({ message: 'Failed to remove photo' });
+  }
+}
+
 export async function listThresholds(req, res) {
   const db = await getDb();
   const role = normalizeRole(req.user.role);

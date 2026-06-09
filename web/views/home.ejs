@@ -66,6 +66,12 @@
     .home-footer a { color: rgba(255,255,255,0.35); text-decoration: none; }
     .home-footer a:hover { color: rgba(255,255,255,0.6); }
   </style>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1D9E75">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ZimParks">
+  <link rel="apple-touch-icon" href="/public/images/logo.png">
 </head>
 <body>
 
@@ -148,5 +154,10 @@
     <p>&copy; <%= new Date().getFullYear() %> Zimbabwe Parks and Wildlife Management Authority &mdash; <a href="/parks">Explore Parks</a> &mdash; <a href="/login">Staff Login</a></p>
   </footer>
 
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => reg.update()).catch(() => {});
+  }
+</script>
 </body>
 </html>

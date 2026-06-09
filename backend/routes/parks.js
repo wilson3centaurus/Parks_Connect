@@ -10,7 +10,8 @@ import {
   assignPark,
   upsertThreshold,
   listThresholds,
-  uploadParkPhoto
+  uploadParkPhoto,
+  clearParkPhoto
 } from '../controllers/parksController.js';
 
 const router = Router();
@@ -23,6 +24,7 @@ router.post('/assign', authenticate, authorizeRoles('authority_admin'), assignPa
 router.get('/thresholds', authenticate, authorizeRoles('authority_admin', 'environment_officer'), listThresholds);
 router.post('/thresholds', authenticate, authorizeRoles('authority_admin'), upsertThreshold);
 router.post('/:id/photo', authenticate, authorizeRoles('authority_admin'), memUpload, uploadParkPhoto);
+router.delete('/:id/photo', authenticate, authorizeRoles('authority_admin'), clearParkPhoto);
 router.get('/:id', getParkDetail);
 
 export default router;
